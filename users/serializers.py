@@ -43,8 +43,11 @@ class UserSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         """회원가입을 위한 메서드입니다."""
         user = super().create(validated_data)
-        password = user.password
-        user.set_password(password)
+        try:
+            validate_password(password=validated_data['password'])
+        except ValidationError as err:
+            raise serializers.ValidationError({'password':err.messages})
+        user.set_password(user.password)
         user.save()
         return user
 
