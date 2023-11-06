@@ -89,6 +89,6 @@ class User(AbstractBaseUser):
     def has_module_perms(self, app_label):
         return True
 
-    # @property
+    # @property is_staff 직접 정의하여 주석 처리함.
     # def is_staff(self):
     #     return self.is_admin
