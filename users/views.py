@@ -3,15 +3,16 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework_simplejwt.views import TokenObtainPairView
-
 from users.serializers import LoginSerializer, UserSerializer
+
+from rest_framework.validators import UniqueValidator
 
 
 class SignupView(APIView):
     def post(self, request):
         "사용자 정보를 받아 회원가입합니다."
         serializer = UserSerializer(data=request.data)
-        if serializer.is_valid():
+        if serializer.is_valid(raise_exception=True):   # 오류 메세지 커스텀을 위해서
             user= serializer.save()
             return Response({"message":"회원가입이 완료되었습니다."}, status=status.HTTP_201_CREATED)
         else:
