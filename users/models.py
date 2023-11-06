@@ -75,13 +75,13 @@ class User(AbstractBaseUser):
     following = models.ManyToManyField('self', verbose_name='팔로잉', related_name='followers',symmetrical=False, blank=True)
 
 
-    object = UserManager()
+    objects = UserManager()
 
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['nickname',]
 
     def __str__(self):
-        return self.nickname
+        return self.email
 
     def has_perm(self, perm, obj=None):
         return True
