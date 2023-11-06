@@ -57,6 +57,7 @@ class LoginSerializer(TokenObtainPairSerializer):
     def get_token(cls, user):
         token = super().get_token(user)
 
+        token['user_id'] = user.id
         token['email'] = user.email
         token['nickname'] = user.nickname
         token['user_img'] = user.user_img.url
