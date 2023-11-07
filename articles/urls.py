@@ -33,4 +33,9 @@ urlpatterns = [
         views.StarRateView.as_view(),
         name="star_rate_view",
     ),
+    path(
+        "recipe/<int:article_recipe_id>/bookmark/",
+        views.RecipeBookmarkView.as_view(),
+        name="bookmark_view",
+    ),
 ]
