@@ -52,7 +52,38 @@ class UserSerializer(serializers.ModelSerializer):
         user.set_password(user.password)
         user.save()
         return user
-    
+
+
+class LoginSerializer(TokenObtainPairSerializer):
+    '''로그인시 생성되는 토큰의 payload를 커스텀하기 위한 Serializer입니다.'''
+    '''로그인 실패 시 error 메세지를 커스텀하고,  생성되는 토큰의 payload를 커스텀하기 위한 Serializer입니다.'''
+
+    def validate(self, attrs):
+        user = get_object_or_404(User, email=attrs[self.username_field])
+
+        # (미구현) 속도 느려지는 이슈로 주석 처리, 이메일 형식이 유효하지 않을 때 에러 메세지
+        # def is_email_valid(email):
+        #     REGEX_EMAIL = '([A-Za-z0-9]+[.-_])*[A-Za-z0-9]+@[A-Za-z0-9-]+(\.[A-Z|a-z]{2,})+'
+        #     if not re.fullmatch(REGEX_EMAIL, email):
+        #         return "이메일 형식을 확인하세요."
+        # print(email)
+        # is_email_valid(attrs['email'])
+
+        # 전달받은 비밀번호와 사용자의 비밀번호를 비교해 검증하고, 커스텀한 에러 메세지 보내기
+        if check_password(attrs['password'], user.password) == False:
+            raise AuthenticationFailed("사용자를 찾을 수 없습니다. 로그인 정보를 확인하세요.") # password 정보만 틀렸을 때
+        data = super().validate(attrs)
+        return data
+
+    @classmethod
+    def get_token(cls, user):
+        token = super().get_token(user)
+        token['user_id'] = user.id
+        token['email'] = user.email
+        token['nickname'] = user.nickname
+        token['user_img'] = user.user_img.url
+        return token
+
 class UserInfoSerializer(serializers.ModelSerializer):
     """회원 정보 확인"""
     class Meta:
