@@ -1,20 +1,20 @@
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager
+
 # Create your models here.
 
-class UserManager(BaseUserManager):
 
+class UserManager(BaseUserManager):
     ''' 사용자 모델을 생성하고 관리하는 클래스 입니다.'''
 
+
     def create_user(self, email, password, nickname):
-        ''''일반 사용자를 생성합니다.'''
+        """'일반 사용자를 생성합니다."""
         if not email:
-            raise ValueError('유효하지 않은 이메일 형식입니다.')
+            raise ValueError("유효하지 않은 이메일 형식입니다.")
 
         user = self.model(
-            email=self.normalize_email(email),
-            password=password,
-            nickname=nickname
+            email=self.normalize_email(email), password=password, nickname=nickname
         )
 
         user.set_password(password)
@@ -23,14 +23,11 @@ class UserManager(BaseUserManager):
 
     def create_superuser(self, email, password, nickname):
         if not email:
-            raise ValueError('유효하지 않은 이메일 형식입니다.')
+            raise ValueError("유효하지 않은 이메일 형식입니다.")
 
         user = self.create_user(
-            email=self.normalize_email(email),
-            password=password,
-            nickname=nickname
+            email=self.normalize_email(email), password=password, nickname=nickname
         )
-
 
         user.is_admin = True
         user.is_staff = True
@@ -40,7 +37,7 @@ class UserManager(BaseUserManager):
 
 
 class User(AbstractBaseUser):
-    '''
+    """
     커스텀 User 모델 정의
 
     - email(필수): 로그인 시 사용되는 이메일 주소입니다.
@@ -62,7 +59,7 @@ class User(AbstractBaseUser):
     - is_active :  계정 활성화 여부를 가립니다.
         - 이메일 인증 기능 구현 시 default=False로 변경해야 합니다.
     - is_staff : 스태프 권한 여부입니다.
-    '''
+    """
 
     email = models.EmailField('이메일', max_length=255, unique=True)
     nickname = models.CharField('닉네임', max_length=30, unique=True)
@@ -79,6 +76,10 @@ class User(AbstractBaseUser):
 
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['nickname',]
+
+
+
+
 
     def __str__(self):
         return self.email
