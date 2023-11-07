@@ -11,6 +11,9 @@ db.sqlite3
 db.sqlite3-journal
 media
 
+### Formatter ###
+.vscode
+
 # If your build process includes running collectstatic, then you probably don't need or want to include staticfiles/
 # in your Git repository. Update and uncomment the following line accordingly.
 # <django-project-name>/staticfiles/
@@ -342,3 +345,11 @@ $RECYCLE.BIN/
 *.lnk
 
 # End of https://www.toptal.com/developers/gitignore/api/visualstudiocode,windows,macos,python,django
+articles/migrations/0001_initial.py
+articles/migrations/0002_alter_articlerecipe_api_recipe.py
+articles/migrations/0003_alter_articlerecipe_api_recipe.py
+articles/migrations/0004_alter_articlerecipe_api_recipe.py
+articles/migrations/0005_rename_user_articlerecipe_author.py
+articles/migrations/0006_articlerecipe_description.py
+users/migrations/0001_initial.py
+users/migrations/0002_alter_user_managers.py

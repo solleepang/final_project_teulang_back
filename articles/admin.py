@@ -1,3 +1,5 @@
 from django.contrib import admin
+from articles.models import ArticleRecipe, RecipeOrder
 
-# Register your models here.
+admin.site.register(ArticleRecipe)
+admin.site.register(RecipeOrder)
