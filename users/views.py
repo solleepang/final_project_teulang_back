@@ -4,7 +4,9 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework.generics import get_object_or_404
-from users.serializers import LoginSerializer, UserSerializer
+from users.serializers import LoginSerializer, UserSerializer, ProfileUpdateSerializer
+from users.models import User
+
 
 
 class SignupView(APIView):
@@ -33,8 +35,8 @@ class UserDetailView(APIView):
     사용자의 정보를 get요청으로 받아야합니다.
     """
     def get(self, request, user_id, format=None):
-        user = get_object_or_404(get_user_model(), pk=user_id)
-        serializer = UserInfoSerializer(user)
+        user = get_object_or_404(User, pk=user_id)
+        serializer = UserSerializer(user)
         return Response(serializer.data, status=status.HTTP_200_OK)
     
     """
@@ -43,7 +45,7 @@ class UserDetailView(APIView):
     def put(self, request,user_id,format=None):
         if not request.user.is_authenticated:
             Response({"detail": "권한이 없습니다."}, status=status.HTTP_403_FORBIDDEN)
-        serializer = UserCreateSerializer(request.user, data=request.data, partial=True)
+        serializer = ProfileUpdateSerializer(request.user, data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
@@ -53,14 +55,4 @@ class UserDetailView(APIView):
     """
     사용자의 정보를 delete요청으로 회원탈퇴를 진행합니다.
     """
-    def delete(self, request, format=None):
-        user = request.user
-        if not user.is_authenticated:
-            return Response({"detail": "권한이 없습니다."}, status=status.HTTP_403_FORBIDDEN)
-        password = request.data.get("password", "")
-        auth_user = authenticate(username=user.username, password=password)
-        if auth_user:
-            auth_user.delete()
-            return Response({"message": "회원 탈퇴 완료."}, status=status.HTTP_204_NO_CONTENT)
-        else:
-            return Response({"detail": "비밀번호 불일치."}, status=status.HTTP_403_FORBIDDEN)
+    

@@ -16,6 +16,46 @@ class UserSerializer(serializers.ModelSerializer):
         user.set_password(password)
         user.save()
         return user
+    
+    # def update(self, instance, validated_data):
+    #     """회원 수정을 위한 메서드입니다."""
+    #     password = validated_data.pop("password", None)
+    #     user = super().update(instance, validated_data)
+    #     if password:
+    #         user.set_password(password)
+    #         user.save()
+    #     return user
+
+
+class ProfileUpdateSerializer(serializers.ModelSerializer):
+    
+    user_img = serializers.ImageField(required=False)
+    
+    class Meta:
+        model = User
+        fields = ['nickname', 'password', 'user_img'] 
+        
+    def update(self, instance, validated_data):
+        """회원 수정을 위한 메서드입니다."""
+        password = validated_data.pop("password", None)
+        user = super().update(instance, validated_data)
+        if password:
+            user.set_password(password)
+            user.save()
+        return user
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 class LoginSerializer(TokenObtainPairSerializer):
