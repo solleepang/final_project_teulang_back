@@ -4,7 +4,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework.generics import get_object_or_404
-from users.serializers import LoginSerializer, UserSerializer, ProfileUpdateSerializer
+from users.serializers import LoginSerializer, UserSerializer, ProfileUpdateSerializer, UserInfoSerializer
 from users.models import User
 
 
@@ -29,18 +29,18 @@ class LoginView(TokenObtainPairView):
     
     
     
-# 회원정보 수정
+# 사용자 정보 및 회원정보 수정
 class UserDetailView(APIView):
     """
     사용자의 정보를 get요청으로 받아야합니다.
     """
     def get(self, request, user_id, format=None):
         user = get_object_or_404(User, pk=user_id)
-        serializer = UserSerializer(user)
+        serializer = UserInfoSerializer(user)
         return Response(serializer.data, status=status.HTTP_200_OK)
     
     """
-    사용자의 정보를 put요청으로 수정해야합니다.
+    로그인한 사람의 정보를 put요청으로 수정해야합니다.
     """
     def put(self, request,user_id,format=None):
         if not request.user.is_authenticated:
