@@ -6,9 +6,15 @@ from rest_framework.test import APITestCase
 User = get_user_model()
 
 class UserRegisterationTestCase(APITestCase):
-    def setUp(self):
-        self.data = {'email': 'john@t.com','nickname':'john', 'password':'johnpassword'}
-        self.user = User.objects.create_user('john@mx.com', 'john','johnpassword')
+
+    @classmethod
+    def setUpTestData(cls): # test 를 처음 시작할 때 모든 method에 대해서 이 부분만 실행됨
+        cls.user_data = {'email': 'john@t.com', 'nickname':'john', 'password':'johnpassword'} # 인스턴스뿐만 아니라 다른 속성들도 가지게 됨.
+        cls.user = User.objects.create_user('john@mx.com','john','johnpassword')
+    '''위, 아래 test 모두 중복확인하는 함수 두 개는 fail임'''
+    # def setUp(self):
+    #     self.data = {'username': 'john@mx.com','nickname':'john', 'password':'johnpassword'}
+    #     self.user = User.objects.create_user('john@mx.com','john','johnpassword')
 
     # 회원가입 테스트
     def test_registration(self):
@@ -25,7 +31,7 @@ class UserRegisterationTestCase(APITestCase):
     # 회원가입 이메일 유효성 검사 테스트
     def test_registeration_email_validation(self):
         url = reverse("sign_up_view")
-        user_data = {'email':'john@t',"nickname":"john", "password":"1234t123!"}
+        user_data = {'email':'john@t',"nickname":"john1", "password":"1234t123!"}
         response = self.client.post(url, user_data, format='json')
         print(response.data)    # F{'email': [ErrorDetail(string='Enter a valid email address.', code='invalid')]}
         self.assertEquals(response.status_code, 400)
