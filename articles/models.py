@@ -4,7 +4,7 @@ from users.models import User
 
 class ArticleRecipe(models.Model):
     author = models.ForeignKey(
-        User, on_delete=models.SET_NULL, null=True
+        User, on_delete=models.SET_NULL, null=True, related_name="articles_recipe"
     )  # 회원 탈퇴시 author만 NULL로 되고 글은 유지됩니다.
     title = models.CharField(max_length=50)
     description = models.CharField(max_length=100, null=True, blank=True)

@@ -16,6 +16,47 @@ class UserSerializer(serializers.ModelSerializer):
         user.set_password(password)
         user.save()
         return user
+    
+class UserInfoSerializer(serializers.ModelSerializer):
+    """회원 정보 확인"""
+    class Meta:
+        model = User
+        fields = ("email", "user_img", )
+
+
+class ProfileUpdateSerializer(serializers.ModelSerializer):
+    
+    user_img = serializers.ImageField(required=False)
+    extra_kwargs = {
+        'password': {'write_only': True},
+        'email' : {'reade_only': True}
+        }
+    
+    class Meta:
+        model = User
+        fields = ['email','nickname', 'password', 'user_img'] 
+        
+    def update(self, instance, validated_data):
+        """회원 수정을 위한 메서드입니다."""
+        password = validated_data.pop("password", None)
+        user = super().update(instance, validated_data)
+        if password:
+            user.set_password(password)
+            user.save()
+        return user
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 class LoginSerializer(TokenObtainPairSerializer):
