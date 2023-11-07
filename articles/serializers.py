@@ -20,7 +20,7 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
         fields = (
             "title",
             "ingredients",
-            "article_recipe_img",
+            "recipe_thumbnail",
             "description",
             "api_recipe",
         )

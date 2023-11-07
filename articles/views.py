@@ -65,7 +65,7 @@ class OrderView(APIView):
     # 각 레시피의 조리 순서 전부 가져오기
     def get(self, request, article_recipe_id):
         recipe = ArticleRecipe.objects.get(id=article_recipe_id)
-        recipe_orders = recipe.order_set.all()
+        recipe_orders = recipe.recipe_order.all()  # order_set -> recipe_order
         serializer = OrderSerializer(recipe_orders, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
@@ -111,7 +111,7 @@ class OrderDetailView(APIView):
 
 class StarRateView(APIView):
     def post(self, request, article_recipe_id):
-        """ 요청 유저 아이디로 해당 레시피에 별점 추가 """
+        """요청 유저 아이디로 해당 레시피에 별점 추가"""
         # 로그인 정보 확인
         try:
             user = User.objects.get(id=request.user.id)
@@ -127,8 +127,7 @@ class StarRateView(APIView):
             return Response("자신의 글에는 별점을 매길 수 없습니다.", status=status.HTTP_403_FORBIDDEN)
 
         try:
-            StarRate.objects.get(
-                user_id=user, article_recipe_id=article_recipe_id)
+            StarRate.objects.get(user_id=user, article_recipe_id=article_recipe_id)
         except ObjectDoesNotExist:
             # 별점이 존재하지 않으면 새로 추가
             serializer = StarRateSerializer(data=request.data)
