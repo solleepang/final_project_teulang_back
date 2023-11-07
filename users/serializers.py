@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from users.models import User
+from articles.models import ArticleRecipe
 
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
@@ -16,14 +17,28 @@ class UserSerializer(serializers.ModelSerializer):
         user.set_password(password)
         user.save()
         return user
-    
+  
+# 마이페이지에서 해당 작성자가 쓴 글을 받기 위한 클래스입니다.
+class ArticleRecipeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ArticleRecipe  
+        fields = "__all__"
+
+  
+  
+# 마이페이지에서 작성자의 정보를 확인하기 위한 클래스입니다.
 class UserInfoSerializer(serializers.ModelSerializer):
+    
+    articles_recipe = ArticleRecipeSerializer(many=True, read_only=True)
+    
     """회원 정보 확인"""
     class Meta:
         model = User
-        fields = ("email", "user_img", )
+        fields = ("email", "user_img", "articles_recipe","nickname","following")
+        # fields = "__all__"
 
 
+# 회원 수정을 위한 클래스입니다.
 class ProfileUpdateSerializer(serializers.ModelSerializer):
     
     user_img = serializers.ImageField(required=False)

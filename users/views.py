@@ -2,11 +2,12 @@ from django.shortcuts import render
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
+from articles.models import ArticleRecipe
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework.generics import get_object_or_404
 from users.serializers import LoginSerializer, UserSerializer, ProfileUpdateSerializer, UserInfoSerializer
 from users.models import User
-
+from django.http import JsonResponse
 
 
 class SignupView(APIView):
@@ -43,7 +44,7 @@ class UserDetailView(APIView):
     로그인한 사람의 정보를 put요청으로 수정해야합니다.
     """
     def put(self, request,user_id,format=None):
-        if not request.user.is_authenticated:
+        if not request.user.is_authenticated or request.user.id != user_id:
             Response({"detail": "권한이 없습니다."}, status=status.HTTP_403_FORBIDDEN)
         serializer = ProfileUpdateSerializer(request.user, data=request.data, partial=True)
         if serializer.is_valid():
