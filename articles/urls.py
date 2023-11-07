@@ -19,6 +19,6 @@ urlpatterns = [
         name="order_detail_view",
     ),
     path('recipe/<int:article_recipe_id>/comment/', views.CommentView.as_view()),
-    path('recipe/<int:article_recipe_id>/comment/<int:recipe_comment_id>',
+    path('recipe/<int:article_recipe_id>/comment/<int:recipe_comment_id>/',
          views.CommentView.as_view()),
 ]

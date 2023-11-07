@@ -33,11 +33,11 @@ class RecipeOrder(models.Model):
         return str(self.article_recipe)
 
 
-class RecipeComment(models.Model):
+class CommentArticlesRecipe(models.Model):
     author = models.ForeignKey(
         User, on_delete=models.SET_NULL, null=True, related_name='user_comment')
     recipe = models.ForeignKey(
         ArticleRecipe, on_delete=models.CASCADE, related_name='article_recipe_comment')
-    content = models.CharField()
+    content = models.CharField(max_length=255)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
