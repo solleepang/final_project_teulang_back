@@ -1,36 +1,33 @@
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager
+
 # Create your models here.
 
+
 class UserManager(BaseUserManager):
-    
-    ''' 사용자 모델을 생성하고 관리하는 클래스 입니다.'''
-    
+
+    """사용자 모델을 생성하고 관리하는 클래스 입니다."""
+
     def create_user(self, email, password, nickname):
-        ''''일반 사용자를 생성합니다.'''
+        """'일반 사용자를 생성합니다."""
         if not email:
-            raise ValueError('유효하지 않은 이메일 형식입니다.')
+            raise ValueError("유효하지 않은 이메일 형식입니다.")
 
         user = self.model(
-            email=self.normalize_email(email),
-            password=password,
-            nickname=nickname
+            email=self.normalize_email(email), password=password, nickname=nickname
         )
 
         user.set_password(password)
         user.save(using=self._db)
         return user
-        
+
     def create_superuser(self, email, password, nickname):
         if not email:
-            raise ValueError('유효하지 않은 이메일 형식입니다.')
+            raise ValueError("유효하지 않은 이메일 형식입니다.")
 
         user = self.create_user(
-            email=self.normalize_email(email),
-            password=password,
-            nickname=nickname
+            email=self.normalize_email(email), password=password, nickname=nickname
         )
-
 
         user.is_admin = True
         user.is_staff = True
@@ -40,7 +37,7 @@ class UserManager(BaseUserManager):
 
 
 class User(AbstractBaseUser):
-    '''
+    """
     커스텀 User 모델 정의
 
     - email(필수): 로그인 시 사용되는 이메일 주소입니다. + 유니크값
@@ -58,34 +55,44 @@ class User(AbstractBaseUser):
     - following : 팔로우 입니다.
         - related_name을 followers로 정의해야합니다.
         - symmetrical 는 False로 해야합니다.
-    - is_admin : 관리자 권한 여부를 가립니다.    
+    - is_admin : 관리자 권한 여부를 가립니다.
     - is_active :  계정 활성화 여부를 가립니다.
         - 이메일 인증 기능 구현시 default=False로 변경해야합니다.
     - is_staff : 스태프 권한 여부입니다.
-    '''
-    
-    email = models.CharField('이메일', max_length=255, unique=True)
-    nickname = models.CharField('닉네임', max_length=30, unique=True)
-    password = models.CharField('비밀번호', max_length=255)
-    created_at = models.DateTimeField('회원가입일', auto_now_add=True)
-    is_admin = models.BooleanField('관리자 권한 여부', default=False)
-    is_active = models.BooleanField('계정 활성화 여부', default=True) # 이메일 인증 완료 시, False로 변경
-    is_staff = models.BooleanField('스태브 여부', default=False)
-    user_img = models.ImageField('프로필 이미지', upload_to='user/user_img/%Y/%m/%D', default='user_defalt.jpg')
-    following = models.ManyToManyField('self', verbose_name='팔로잉', related_name='followers',symmetrical=False, blank=True)
-    
-    
-    object = UserManager()
-    
-    USERNAME_FIELD = 'email'
-    REQUIRED_FIELDS = ['nickname',]
-    
+    """
+
+    email = models.CharField("이메일", max_length=255, unique=True)
+    nickname = models.CharField("닉네임", max_length=30, unique=True)
+    password = models.CharField("비밀번호", max_length=255)
+    created_at = models.DateTimeField("회원가입일", auto_now_add=True)
+    is_admin = models.BooleanField("관리자 권한 여부", default=False)
+    is_active = models.BooleanField("계정 활성화 여부", default=True)  # 이메일 인증 완료 시, False로 변경
+    is_staff = models.BooleanField("스태브 여부", default=False)
+    user_img = models.ImageField(
+        "프로필 이미지", upload_to="user/user_img/%Y/%m/%D", default="user_defalt.jpg"
+    )
+    following = models.ManyToManyField(
+        "self",
+        verbose_name="팔로잉",
+        related_name="followers",
+        symmetrical=False,
+        blank=True,
+    )
+
+    # 오류로 인해 object -> objects로 변경
+    objects = UserManager()
+
+    USERNAME_FIELD = "email"
+    REQUIRED_FIELDS = [
+        "nickname",
+    ]
+
     def __str__(self):
         return self.nickname
 
     def has_perm(self, perm, obj=None):
         return True
-    
+
     def has_module_perms(self, app_label):
         return True
 
