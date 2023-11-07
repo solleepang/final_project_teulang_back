@@ -12,7 +12,7 @@ class ArticleRecipe(models.Model):
     )  # 레시피 간단 설명 추가됨
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    ingredients = models.TextField()
+    # ingredients = models.TextField() // foreignkey로 새 테이블 생성
     # star_avg = models.FloatField(null=True, blank=True) //삭제
     # 입력하지 않았을때 해당값은 False 입니다.
     api_recipe = models.BooleanField(default=False)
@@ -32,6 +32,18 @@ class RecipeOrder(models.Model):
     content = models.TextField()
     recipe_img = models.ImageField(blank=True)
     order = models.IntegerField()
+
+    def __str__(self):
+        return str(self.article_recipe)
+
+
+class ArticleRecipeIngredients(models.Model):
+    article_recipe = models.ForeignKey(
+        ArticleRecipe,
+        on_delete=models.CASCADE,
+        related_name="recipe_ingredients",
+    )
+    ingredients = models.CharField(max_length=50)
 
     def __str__(self):
         return str(self.article_recipe)
