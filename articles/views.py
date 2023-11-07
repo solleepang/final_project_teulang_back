@@ -7,6 +7,7 @@ from articles.models import (
     RecipeOrder,
     ArticleRecipeIngredients,
     StarRate,
+    RecipeBookmark,
 )
 from articles.serializers import (
     RecipeSerializer,
@@ -16,6 +17,7 @@ from articles.serializers import (
     IngredientSerializer,
     IngredientCreateSerializer,
     StarRateSerializer,
+    RecipeBookmarkSerializer,
 )
 from users.models import User
 from django.core.exceptions import ObjectDoesNotExist
@@ -172,7 +174,7 @@ class IngredientDetailView(APIView):
 
 class StarRateView(APIView):
     def post(self, request, article_recipe_id):
-        """요청 유저 아이디로 해당 레시피에 별점 추가"""
+        """ 요청 유저 아이디로 해당 레시피에 별점 추가 """
         # 로그인 정보 확인
         try:
             user = User.objects.get(id=request.user.id)
@@ -182,13 +184,14 @@ class StarRateView(APIView):
         try:
             recipe = ArticleRecipe.objects.get(id=article_recipe_id)
         except ObjectDoesNotExist:
-            return Response("존재하지 않는 레시피입니다.", status=status.HTTP_401_UNAUTHORIZED)
+            return Response("존재하지 않는 레시피입니다.", status=status.HTTP_400_BAD_REQUEST)
         # 본인의 글인지 확인
         if recipe.author == request.user:
             return Response("자신의 글에는 별점을 매길 수 없습니다.", status=status.HTTP_403_FORBIDDEN)
 
         try:
-            StarRate.objects.get(user_id=user, article_recipe_id=article_recipe_id)
+            RecipeBookmark.objects.get(
+                user_id=user, article_recipe_id=article_recipe_id)
         except ObjectDoesNotExist:
             # 별점이 존재하지 않으면 새로 추가
             serializer = StarRateSerializer(data=request.data)
@@ -200,3 +203,35 @@ class StarRateView(APIView):
         else:
             # 별점 중복 확인
             return Response("이미 작성한 별점이 있습니다.", status=status.HTTP_409_CONFLICT)
+
+
+class RecipeBookmarkView(APIView):
+    """ 요청 유저 아이디로 해당 레시피를 북마크 추가 """
+
+    def post(self, request, article_recipe_id):
+        # 로그인 정보 확인
+        try:
+            user = User.objects.get(id=request.user.id)
+        except ObjectDoesNotExist:
+            return Response("로그인 정보가 없습니다.", status=status.HTTP_401_UNAUTHORIZED)
+        # 요청한 레시피 있는지 확인
+        try:
+            recipe = ArticleRecipe.objects.get(id=article_recipe_id)
+        except ObjectDoesNotExist:
+            return Response("존재하지 않는 레시피입니다.", status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            bookmark = RecipeBookmark.objects.get(
+                user_id=user, article_recipe_id=article_recipe_id)
+        except ObjectDoesNotExist:
+            # 북마크 정보가 존재하지 않으면 새로 추가
+            serializer = RecipeBookmarkSerializer(data=request.data)
+            if serializer.is_valid():
+                serializer.save(user_id=user, article_recipe_id=recipe)
+                return Response("북마크가 저장되었습니다.", status=status.HTTP_201_CREATED)
+            else:
+                return Response("잘못된 요청입니다.", status=status.HTTP_400_BAD_REQUEST)
+        else:
+            # 북마크 정보가 존재하면 북마크 삭제
+            bookmark.delete()
+            return Response("북마크가 취소되었습니다.", status=status.HTTP_200_OK)

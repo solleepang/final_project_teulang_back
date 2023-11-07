@@ -51,7 +51,16 @@ class ArticleRecipeIngredients(models.Model):
 
 class StarRate(models.Model):
     star_rate = models.IntegerField(null=True, blank=True)
-    user_id = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    user_id = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, related_name="recipe_star_rate")
     article_recipe_id = models.ForeignKey(
-        ArticleRecipe, on_delete=models.CASCADE, null=True
+        ArticleRecipe, on_delete=models.CASCADE, null=True, related_name="recipe_star_rate"
     )
+
+
+class RecipeBookmark(models.Model):
+    article_recipe_id = models.ForeignKey(
+        ArticleRecipe, on_delete=models.CASCADE, null=True, related_name="recipe_bookmark"
+    )
+    user_id = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, related_name="recipe_bookmark")
