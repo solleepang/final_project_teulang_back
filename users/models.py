@@ -78,7 +78,7 @@ class User(AbstractBaseUser):
         symmetrical=False,
         blank=True,
     )
-
+    point = models.IntegerField(default=0)
     # 오류로 인해 object -> objects로 변경
     objects = UserManager()
 
