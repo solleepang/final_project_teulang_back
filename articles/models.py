@@ -12,7 +12,8 @@ class ArticleRecipe(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     ingredients = models.TextField()
     star_avg = models.FloatField(null=True, blank=True)
-    api_recipe = models.BooleanField(default=False)  # 입력하지 않았을때 해당값은 False 입니다.
+    # 입력하지 않았을때 해당값은 False 입니다.
+    api_recipe = models.BooleanField(default=False)
     article_recipe_img = models.ImageField(blank=True)
     bookmark_count = models.IntegerField(null=True, blank=True)
 
@@ -30,3 +31,10 @@ class RecipeOrder(models.Model):
 
     def __str__(self):
         return str(self.article_recipe)
+
+
+class StarRate(models.Model):
+    star_rate = models.IntegerField(null=True, blank=True)
+    user_id = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    article_recipe_id = models.ForeignKey(
+        ArticleRecipe, on_delete=models.CASCADE, null=True)
