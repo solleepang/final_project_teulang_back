@@ -18,4 +18,6 @@ urlpatterns = [
         views.OrderDetailView.as_view(),
         name="order_detail_view",
     ),
+    path("recipe/<int:article_recipe_id>/star_rate/",
+         views.StarRateView.as_view(), name="star_rate_view"),
 ]

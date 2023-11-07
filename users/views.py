@@ -3,7 +3,10 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework_simplejwt.views import TokenObtainPairView
-from users.serializers import LoginSerializer, UserSerializer
+from rest_framework.generics import get_object_or_404
+from users.serializers import LoginSerializer, UserSerializer, ProfileUpdateSerializer, UserInfoSerializer
+from users.models import User
+
 
 from rest_framework.validators import UniqueValidator
 
@@ -25,3 +28,33 @@ class LoginView(TokenObtainPairView):
     JWT 토큰 인증 방식을 커스터마이징해서 활용합니다.
     """
     serializer_class = LoginSerializer
+    
+    
+    
+# 사용자 정보 및 회원정보 수정
+class UserDetailView(APIView):
+    """
+    사용자의 정보를 get요청으로 받아야합니다.
+    """
+    def get(self, request, user_id, format=None):
+        user = get_object_or_404(User, pk=user_id)
+        serializer = UserInfoSerializer(user)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    
+    """
+    로그인한 사람의 정보를 put요청으로 수정해야합니다.
+    """
+    def put(self, request,user_id,format=None):
+        if not request.user.is_authenticated:
+            Response({"detail": "권한이 없습니다."}, status=status.HTTP_403_FORBIDDEN)
+        serializer = ProfileUpdateSerializer(request.user, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    """
+    사용자의 정보를 delete요청으로 회원탈퇴를 진행합니다.
+    """
+    
