@@ -15,7 +15,7 @@ from django.contrib.auth.hashers import check_password
 
 class SignupView(APIView):
     def post(self, request):
-        "사용자 정보를 받아 회원가입합니다."
+        """사용자 정보를 받아 회원가입합니다."""
         serializer = UserSerializer(data=request.data)
         if serializer.is_valid(raise_exception=True):   # 오류 메세지 커스텀을 위해서
             user= serializer.save()
@@ -23,7 +23,7 @@ class SignupView(APIView):
         else:
             return Response({"message":serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
 
-class DuplicateEmailConfirmkView(APIView):
+class DuplicateEmailConfirmView(APIView):
     """이메일 정보를 받아서 고유한 값이면 status 200을, 중복된 값이면 status 409을 반환합니다."""
     def post(self, request):
         email = request.data['email']
@@ -58,9 +58,9 @@ class LoginView(TokenObtainPairView):
     JWT 토큰 인증 방식을 커스터마이징해서 활용합니다.
     """
     serializer_class = LoginSerializer
-    
-    
-    
+
+
+
 # 사용자 정보 및 회원정보 수정
 class UserDetailView(APIView):
     """
@@ -70,7 +70,7 @@ class UserDetailView(APIView):
         user = get_object_or_404(User, pk=user_id)
         serializer = UserInfoSerializer(user)
         return Response(serializer.data, status=status.HTTP_200_OK)
-    
+
     """
     로그인한 사람의 정보를 put요청으로 수정해야합니다.
     """
@@ -91,11 +91,10 @@ class UserDetailView(APIView):
         user = get_object_or_404(User, pk=user_id)
         if not user.is_authenticated:
             return Response({"detail": "권한이 없습니다."}, status=status.HTTP_403_FORBIDDEN)
-        
+
         password = request.data.get("password", "")
         if check_password(password, user.password): # 회원탈퇴시 비밀번호를 적어야 탈퇴가능!
             user.delete()
             return Response({"message": "회원 탈퇴 완료."}, status=status.HTTP_204_NO_CONTENT)
         else:
             return Response({"detail": "비밀번호 불일치."}, status=status.HTTP_403_FORBIDDEN)
-        
