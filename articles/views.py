@@ -1,3 +1,5 @@
+import requests
+from django.http import JsonResponse
 from rest_framework.generics import get_object_or_404
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -176,7 +178,7 @@ class IngredientDetailView(APIView):
 
 class StarRateView(APIView):
     def post(self, request, article_recipe_id):
-        """ 요청 유저 아이디로 해당 레시피에 별점 추가 """
+        """요청 유저 아이디로 해당 레시피에 별점 추가"""
         # 로그인 정보 확인
         try:
             user = User.objects.get(id=request.user.id)
@@ -192,8 +194,7 @@ class StarRateView(APIView):
             return Response("자신의 글에는 별점을 매길 수 없습니다.", status=status.HTTP_403_FORBIDDEN)
 
         try:
-            StarRate.objects.get(
-                user_id=user, article_recipe_id=article_recipe_id)
+            StarRate.objects.get(user_id=user, article_recipe_id=article_recipe_id)
         except ObjectDoesNotExist:
             # 별점이 존재하지 않으면 새로 추가
             serializer = StarRateSerializer(data=request.data)
@@ -208,7 +209,7 @@ class StarRateView(APIView):
 
 
 class RecipeBookmarkView(APIView):
-    """ 요청 유저 아이디로 해당 레시피를 북마크 추가 """
+    """요청 유저 아이디로 해당 레시피를 북마크 추가"""
 
     def post(self, request, article_recipe_id):
         # 로그인 정보 확인
@@ -224,7 +225,8 @@ class RecipeBookmarkView(APIView):
 
         try:
             bookmark = RecipeBookmark.objects.get(
-                user_id=user, article_recipe_id=article_recipe_id)
+                user_id=user, article_recipe_id=article_recipe_id
+            )
         except ObjectDoesNotExist:
             # 북마크 정보가 존재하지 않으면 새로 추가
             serializer = RecipeBookmarkSerializer(data=request.data)
@@ -240,16 +242,15 @@ class RecipeBookmarkView(APIView):
 
 
 class CommentView(APIView):
-
     def get(self, request, article_recipe_id):
-        """ 특정 recipe의 댓글 조회 """
+        """특정 recipe의 댓글 조회"""
         recipe = get_object_or_404(ArticleRecipe, id=article_recipe_id)
         comments = recipe.article_recipe_comment.all()
         serializer = RecipeCommentSerializer(comments, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     def post(self, request, article_recipe_id):
-        """ 댓글 작성 """
+        """댓글 작성"""
         serializer = RecipeCommentSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save(author=request.user, recipe_id=article_recipe_id)
@@ -258,7 +259,7 @@ class CommentView(APIView):
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def put(self, request, article_recipe_id, recipe_comment_id):
-        """ 댓글 수정 """
+        """댓글 수정"""
         recipe = get_object_or_404(ArticleRecipe, id=article_recipe_id)
         comment = recipe.article_recipe_comment.get(id=recipe_comment_id)
         serializer = RecipeCommentSerializer(comment, data=request.data)
@@ -268,13 +269,15 @@ class CommentView(APIView):
                 return Response("댓글이 수정되었습니다", status=status.HTTP_200_OK)
             else:
                 return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        elif request.user.is_authenticated == False:    # request.user.is_anonymous == True를 지금과 같은 형태로 변경
+        elif (
+            request.user.is_authenticated == False
+        ):  # request.user.is_anonymous == True를 지금과 같은 형태로 변경
             return Response("로그인 정보가 없습니다", status=status.HTTP_401_UNAUTHORIZED)
         elif request.user != comment.author:
             return Response("권한이 없습니다", status=status.HTTP_403_FORBIDDEN)
 
     def delete(self, request, article_recipe_id, recipe_comment_id):
-        """ 댓글 삭제 """
+        """댓글 삭제"""
         recipe = get_object_or_404(ArticleRecipe, id=article_recipe_id)
         comment = recipe.article_recipe_comment.get(id=recipe_comment_id)
         if request.user == comment.author:
@@ -288,14 +291,15 @@ class CommentView(APIView):
 
 class RecipeSearchView(APIView):
     def get(self, request):
-        """ 검색된 재료 포함하는 레시피 구한 후 object 반환 """
-        quart_string = request.GET['q']
+        """검색된 재료 포함하는 레시피 구한 후 object 반환"""
+        quart_string = request.GET["q"]
         ingredients = quart_string.split(",")
         recipe_ids = []
         compare_ids = []
         for i in range(len(ingredients)):
             ingredients_list = ArticleRecipeIngredients.objects.filter(
-                ingredients__contains=ingredients[i].strip())
+                ingredients__contains=ingredients[i].strip()
+            )
             for j in range(len(ingredients_list)):
                 if i < 1:
                     recipe_ids.append(ingredients_list[j].article_recipe)
@@ -307,3 +311,49 @@ class RecipeSearchView(APIView):
                 compare_ids = []
         serializer = RecipeSerializer(recipe_ids, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+def fetch_and_save_openapi_data(request):
+    url = "http://openapi.foodsafetykorea.go.kr/api/afaef0a5ebf54b1594d2/COOKRCP01/json/1/3"  # API URL 입력 (맨뒤 1124 입력후 urls.py의 경로로 get 요청시 레시피를 가져옵니다.)
+
+    response = requests.get(url)
+
+    if response.status_code == 200:
+        response_data = response.json()
+
+        # JSON 응답 데이터에서 레시피 목록을 가져옴
+        recipes = response_data["COOKRCP01"]["row"]
+
+        # 각 레시피에 대한 데이터를 순회하면서 저장
+        for recipe_data in recipes:
+            article_recipe = ArticleRecipe.objects.create(
+                author_id=1,  # 작성자 ID는 일단 1번으로 했습니다.
+                title=recipe_data["RCP_NM"],
+                api_recipe=True,
+                recipe_thumbnail=recipe_data["ATT_FILE_NO_MK"],
+            )
+
+            # 재료 저장
+            ingredients = recipe_data["RCP_PARTS_DTLS"].split(",")
+            for ingredient in ingredients:
+                ArticleRecipeIngredients.objects.create(
+                    article_recipe=article_recipe, ingredients=ingredient.strip()
+                )
+
+            # 레시피 순서 저장
+            for i in range(1, 21):  # 1에서 20까지의 순서로 데이터가 있음
+                order_key = f"MANUAL{i:02d}"
+                img_key = f"MANUAL_IMG{i:02d}"
+                content = recipe_data.get(order_key, "")
+                img_url = recipe_data.get(img_key, "")
+                if content:
+                    RecipeOrder.objects.create(
+                        article_recipe=article_recipe,
+                        content=content,
+                        recipe_img=img_url,
+                        order=i,
+                    )
+
+        return JsonResponse({"message": "데이터 가져오기 및 저장 완료"})
+    else:
+        return JsonResponse({"error": "데이터 가져오기 실패"}, status=500)
