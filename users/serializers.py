@@ -57,7 +57,6 @@ class UserSerializer(serializers.ModelSerializer):
 
 
 class LoginSerializer(TokenObtainPairSerializer):
-    '''로그인시 생성되는 토큰의 payload를 커스텀하기 위한 Serializer입니다.'''
     '''로그인 실패 시 error 메세지를 커스텀하고,  생성되는 토큰의 payload를 커스텀하기 위한 Serializer입니다.'''
 
     def validate(self, attrs):
@@ -86,24 +85,24 @@ class LoginSerializer(TokenObtainPairSerializer):
         token['user_img'] = user.user_img.url
         return token
 
-  
+
 # 마이페이지에서 해당 작성자가 쓴 글을 받기 위한 클래스입니다.
 class ArticleRecipeSerializer(serializers.ModelSerializer):
     class Meta:
-        model = ArticleRecipe  
+        model = ArticleRecipe
         fields = "__all__"
 
 class RecipeBookmarkSerializer(serializers.ModelSerializer):
     class Meta:
         model = RecipeBookmark
         fields = ['article_recipe_id']
-  
+
 # 마이페이지에서 작성자의 정보를 확인하기 위한 클래스입니다.
 class UserInfoSerializer(serializers.ModelSerializer):
-    
+
     articles_recipe = ArticleRecipeSerializer(many=True, read_only=True)
     bookmarked_articles = RecipeBookmarkSerializer(many=True, read_only=True, source='recipe_bookmark')
-    
+
     """회원 정보 확인"""
     class Meta:
         model = User
@@ -113,17 +112,17 @@ class UserInfoSerializer(serializers.ModelSerializer):
 
 # 회원 수정을 위한 클래스입니다.
 class ProfileUpdateSerializer(serializers.ModelSerializer):
-    
+
     user_img = serializers.ImageField(required=False)
     extra_kwargs = {
         'password': {'write_only': True},
         'email' : {'reade_only': True}
         }
-    
+
     class Meta:
         model = User
-        fields = ['email','nickname', 'password', 'user_img'] 
-        
+        fields = ['email','nickname', 'password', 'user_img']
+
     def update(self, instance, validated_data):
         """회원 수정을 위한 메서드입니다."""
         password = validated_data.pop("password", None)
