@@ -1,6 +1,13 @@
 from rest_framework import serializers
 
-from articles.models import ArticleRecipe, RecipeOrder, CommentArticlesRecipe
+from articles.models import (
+    ArticleRecipe,
+    RecipeOrder,
+    ArticleRecipeIngredients,
+    StarRate,
+    RecipeBookmark,
+    CommentArticlesRecipe,
+)
 
 
 class RecipeSerializer(serializers.ModelSerializer):
@@ -19,8 +26,7 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
         model = ArticleRecipe
         fields = (
             "title",
-            "ingredients",
-            "article_recipe_img",
+            "recipe_thumbnail",
             "description",
             "api_recipe",
         )
@@ -36,6 +42,30 @@ class OrderCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = RecipeOrder
         fields = ("order", "recipe_img", "content")
+
+
+class IngredientSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ArticleRecipeIngredients
+        fields = "__all__"
+
+
+class IngredientCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ArticleRecipeIngredients
+        fields = ("ingredients",)
+
+
+class StarRateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = StarRate
+        fields = "__all__"
+
+
+class RecipeBookmarkSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = RecipeBookmark
+        fields = "__all__"
 
 
 class RecipeCommentSerializer(serializers.ModelSerializer):

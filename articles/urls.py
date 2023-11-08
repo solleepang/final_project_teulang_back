@@ -18,6 +18,26 @@ urlpatterns = [
         views.OrderDetailView.as_view(),
         name="order_detail_view",
     ),
+    path(
+        "recipe/<int:article_recipe_id>/ingredients/",
+        views.IngredientView.as_view(),
+        name="order_view",
+    ),
+    path(
+        "recipe/<int:article_recipe_id>/ingredients/<int:article_recipe_ingredients_id>/",
+        views.IngredientDetailView.as_view(),
+        name="order_detail_view",
+    ),
+    path(
+        "recipe/<int:article_recipe_id>/star_rate/",
+        views.StarRateView.as_view(),
+        name="star_rate_view",
+    ),
+    path(
+        "recipe/<int:article_recipe_id>/bookmark/",
+        views.RecipeBookmarkView.as_view(),
+        name="bookmark_view",
+    ),
     path('recipe/<int:article_recipe_id>/comment/', views.CommentView.as_view()),
     path('recipe/<int:article_recipe_id>/comment/<int:recipe_comment_id>/',
          views.CommentView.as_view()),

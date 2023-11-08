@@ -353,3 +353,5 @@ articles/migrations/0005_rename_user_articlerecipe_author.py
 articles/migrations/0006_articlerecipe_description.py
 users/migrations/0001_initial.py
 users/migrations/0002_alter_user_managers.py
+articles/migrations/0007_rename_article_recipe_img_articlerecipe_recipe_thumbnail_and_more.py
+articles/migrations/0008_remove_articlerecipe_ingredients_and_more.py
