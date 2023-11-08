@@ -145,12 +145,9 @@ class IngredientDetailView(APIView):
     # 각 레시피의 재료 수정하기 (하나씩 각각)
     def put(self, request, article_recipe_id, article_recipe_ingredients_id):
         recipe = get_object_or_404(ArticleRecipe, id=article_recipe_id)
-        # recipe_ingredients = get_object_or_404(
-        #     ArticleRecipeIngredients, id=article_recipe_ingredients_id
-        # )
-        recipe_ingredients = recipe.recipe_ingredients.get(
-            id=article_recipe_ingredients_id)
-        print(recipe_ingredients.ingredients)
+        recipe_ingredients = get_object_or_404(
+            ArticleRecipeIngredients, id=article_recipe_ingredients_id
+        )
         if request.user == recipe.author:  # 해당 레시피 작성자가 아니면 수정 안되게 설정
             serializer = IngredientCreateSerializer(
                 recipe_ingredients, data=request.data
