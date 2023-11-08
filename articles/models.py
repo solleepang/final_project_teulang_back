@@ -64,3 +64,13 @@ class RecipeBookmark(models.Model):
     )
     user_id = models.ForeignKey(
         User, on_delete=models.SET_NULL, null=True, related_name="recipe_bookmark")
+
+
+class CommentArticlesRecipe(models.Model):
+    author = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, related_name='user_comment')
+    article_recipe = models.ForeignKey(         # ERD 설계에 맞춰서 필드명 수정
+        ArticleRecipe, on_delete=models.CASCADE, related_name='article_recipe_comment')
+    content = models.CharField(max_length=255)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)

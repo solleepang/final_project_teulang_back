@@ -18,6 +18,7 @@ from articles.serializers import (
     IngredientCreateSerializer,
     StarRateSerializer,
     RecipeBookmarkSerializer,
+    RecipeCommentSerializer,
 )
 from users.models import User
 from django.core.exceptions import ObjectDoesNotExist
@@ -235,3 +236,50 @@ class RecipeBookmarkView(APIView):
             # 북마크 정보가 존재하면 북마크 삭제
             bookmark.delete()
             return Response("북마크가 취소되었습니다.", status=status.HTTP_200_OK)
+
+
+class CommentView(APIView):
+
+    def get(self, request, article_recipe_id):
+        """ 특정 recipe의 댓글 조회 """
+        recipe = get_object_or_404(ArticleRecipe, id=article_recipe_id)
+        comments = recipe.article_recipe_comment.all()
+        serializer = RecipeCommentSerializer(comments, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def post(self, request, article_recipe_id):
+        """ 댓글 작성 """
+        serializer = RecipeCommentSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save(author=request.user, recipe_id=article_recipe_id)
+            return Response("댓글이 작성되었습니다", status=status.HTTP_201_CREATED)
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def put(self, request, article_recipe_id, recipe_comment_id):
+        """ 댓글 수정 """
+        recipe = get_object_or_404(ArticleRecipe, id=article_recipe_id)
+        comment = recipe.article_recipe_comment.get(id=recipe_comment_id)
+        serializer = RecipeCommentSerializer(comment, data=request.data)
+        if request.user == comment.author:
+            if serializer.is_valid():
+                serializer.save()
+                return Response("댓글이 수정되었습니다", status=status.HTTP_200_OK)
+            else:
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        elif request.user.is_authenticated == False:    # request.user.is_anonymous == True를 지금과 같은 형태로 변경
+            return Response("로그인 정보가 없습니다", status=status.HTTP_401_UNAUTHORIZED)
+        elif request.user != comment.author:
+            return Response("권한이 없습니다", status=status.HTTP_403_FORBIDDEN)
+
+    def delete(self, request, article_recipe_id, recipe_comment_id):
+        """ 댓글 삭제 """
+        recipe = get_object_or_404(ArticleRecipe, id=article_recipe_id)
+        comment = recipe.article_recipe_comment.get(id=recipe_comment_id)
+        if request.user == comment.author:
+            comment.delete()
+            return Response("댓글이 삭제되었습니다", status=status.HTTP_204_NO_CONTENT)
+        elif request.user.is_authenticated == False:
+            return Response("로그인 정보가 없습니다", status=status.HTTP_401_UNAUTHORIZED)
+        else:
+            return Response("권한이 없습니다", status=status.HTTP_403_FORBIDDEN)

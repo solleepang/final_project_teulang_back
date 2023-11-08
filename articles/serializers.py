@@ -6,6 +6,7 @@ from articles.models import (
     ArticleRecipeIngredients,
     StarRate,
     RecipeBookmark,
+    CommentArticlesRecipe,
 )
 
 
@@ -65,3 +66,9 @@ class RecipeBookmarkSerializer(serializers.ModelSerializer):
     class Meta:
         model = RecipeBookmark
         fields = "__all__"
+
+
+class RecipeCommentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CommentArticlesRecipe
+        fields = ("content",)
