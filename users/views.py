@@ -1,4 +1,3 @@
-from django.shortcuts import render
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -7,8 +6,10 @@ from rest_framework.generics import get_object_or_404
 from users.serializers import LoginSerializer, UserSerializer, ProfileUpdateSerializer, UserInfoSerializer
 from users.models import User
 
+from rest_framework.permissions import IsAuthenticated
 
-from rest_framework.validators import UniqueValidator
+from django.core.validators  import validate_email
+from django.core.exceptions  import ValidationError
 
 
 class SignupView(APIView):
@@ -20,6 +21,34 @@ class SignupView(APIView):
             return Response({"message":"회원가입이 완료되었습니다."}, status=status.HTTP_201_CREATED)
         else:
             return Response({"message":serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+
+class DuplicateEmailConfirmkView(APIView):
+    """이메일 정보를 받아서 고유한 값이면 status 200을, 중복된 값이면 status 409을 반환합니다."""
+    def post(self, request):
+        email = request.data['email']
+
+        # 이메일 유효성 검사
+        try:
+            validate_email(email)
+            email_list=User.objects.values_list('email', flat=True)
+
+            # 이메일 중복 확인
+            if request.data['email'] in email_list:
+                return Response({"message":"이미 존재하는 이메일입니다."}, status=status.HTTP_409_CONFLICT)
+            return Response({"message":"사용 가능한 이메일입니다."}, status=status.HTTP_200_OK)
+
+        except ValidationError:
+            return Response({"message" : "이메일 형식이 올바르지 않습니다. 유효한 이메일 주소를 입력하십시오."}, status=status.HTTP_400_BAD_REQUEST)
+
+
+
+class DuplicateNicknameConfirmView(APIView):
+    """닉네임의 정보를 받아서 고유한 값이면 status 200을, 중복된 값이면 status 409을 반환합니다."""
+    def post(self, request):
+        nickname_list=User.objects.values_list('nickname', flat=True)
+        if request.data['nickname'] in nickname_list:
+            return Response({"message":"이미 존재하는 닉네임입니다."}, status=status.HTTP_409_CONFLICT)
+        return Response({"message":"사용 가능한 닉네임입니다."}, status=status.HTTP_200_OK)
 
 
 class LoginView(TokenObtainPairView):
