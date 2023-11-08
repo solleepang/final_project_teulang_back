@@ -22,6 +22,7 @@ from articles.serializers import (
 )
 from users.models import User
 from django.core.exceptions import ObjectDoesNotExist
+import json
 
 
 class RecipeView(APIView):
@@ -191,7 +192,7 @@ class StarRateView(APIView):
             return Response("자신의 글에는 별점을 매길 수 없습니다.", status=status.HTTP_403_FORBIDDEN)
 
         try:
-            RecipeBookmark.objects.get(
+            StarRate.objects.get(
                 user_id=user, article_recipe_id=article_recipe_id)
         except ObjectDoesNotExist:
             # 별점이 존재하지 않으면 새로 추가
@@ -283,3 +284,26 @@ class CommentView(APIView):
             return Response("로그인 정보가 없습니다", status=status.HTTP_401_UNAUTHORIZED)
         else:
             return Response("권한이 없습니다", status=status.HTTP_403_FORBIDDEN)
+
+
+class RecipeSearchView(APIView):
+    def get(self, request):
+        """ 검색된 재료 포함하는 레시피 구한 후 object 반환 """
+        quart_string = request.GET['q']
+        ingredients = quart_string.split(",")
+        recipe_ids = []
+        compare_ids = []
+        for i in range(len(ingredients)):
+            ingredients_list = ArticleRecipeIngredients.objects.filter(
+                ingredients__contains=ingredients[i].strip())
+            for j in range(len(ingredients_list)):
+                if i < 1:
+                    recipe_ids.append(ingredients_list[j].article_recipe)
+                else:
+                    if ingredients_list[j].article_recipe in recipe_ids:
+                        compare_ids.append(ingredients_list[j].article_recipe)
+            if len(ingredients) > 1 and i > 0:
+                recipe_ids = compare_ids
+                compare_ids = []
+        serializer = RecipeSerializer(recipe_ids, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)

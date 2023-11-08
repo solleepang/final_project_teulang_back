@@ -41,4 +41,9 @@ urlpatterns = [
     path('recipe/<int:article_recipe_id>/comment/', views.CommentView.as_view()),
     path('recipe/<int:article_recipe_id>/comment/<int:recipe_comment_id>/',
          views.CommentView.as_view()),
+    path(
+        "recipe/search",
+        views.RecipeSearchView.as_view(),
+        name="recipe_search_view",
+    ),
 ]
