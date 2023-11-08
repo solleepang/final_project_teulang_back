@@ -8,13 +8,15 @@ from rest_framework.generics import get_object_or_404
 from users.serializers import LoginSerializer, UserSerializer, ProfileUpdateSerializer, UserInfoSerializer
 from users.models import User
 from django.http import JsonResponse
+from django.contrib.auth.hashers import check_password
+from rest_framework.validators import UniqueValidator
 
 
 class SignupView(APIView):
     def post(self, request):
         "사용자 정보를 받아 회원가입합니다."
         serializer = UserSerializer(data=request.data)
-        if serializer.is_valid():
+        if serializer.is_valid(raise_exception=True):   # 오류 메세지 커스텀을 위해서
             user= serializer.save()
             return Response({"message":"회원가입이 완료되었습니다."}, status=status.HTTP_201_CREATED)
         else:
@@ -56,4 +58,15 @@ class UserDetailView(APIView):
     """
     사용자의 정보를 delete요청으로 회원탈퇴를 진행합니다.
     """
-    
+    def delete(self, request, user_id, format=None):
+        user = get_object_or_404(User, pk=user_id)
+        if not user.is_authenticated:
+            return Response({"detail": "권한이 없습니다."}, status=status.HTTP_403_FORBIDDEN)
+        
+        password = request.data.get("password", "")
+        if check_password(password, user.password): # 회원탈퇴시 비밀번호를 적어야 탈퇴가능!
+            user.delete()
+            return Response({"message": "회원 탈퇴 완료."}, status=status.HTTP_204_NO_CONTENT)
+        else:
+            return Response({"detail": "비밀번호 불일치."}, status=status.HTTP_403_FORBIDDEN)
+        

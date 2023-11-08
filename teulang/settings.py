@@ -28,6 +28,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "rest_framework",
     "rest_framework_simplejwt",  # 오류 찾아보다 추가 안되어 있길래 추가
+    "corsheaders",
     "users",
     "articles",
 ]
@@ -39,6 +40,7 @@ REST_FRAMEWORK = {
 }
 
 MIDDLEWARE = [
+    "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -102,9 +104,9 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/4.2/topics/i18n/
 
-LANGUAGE_CODE = "en-us"
+LANGUAGE_CODE = "ko-kr"
 
-TIME_ZONE = "UTC"
+TIME_ZONE = "Asia/Seoul"
 
 USE_I18N = True
 
@@ -139,3 +141,6 @@ SIMPLE_JWT = {
     "BLACKLIST_AFTER_ROTATION": False,  # 오류 찾아보다 추가했습니다
     "UPDATE_LAST_LOGIN": False,  # 오류 찾아보다 추가했습니다
 }
+
+
+CORS_ALLOW_ALL_ORIGINS = True
