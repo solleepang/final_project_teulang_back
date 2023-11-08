@@ -71,7 +71,7 @@ class User(AbstractBaseUser):
     user_img = models.ImageField('프로필 이미지', upload_to='user/user_img/%Y/%m/%D', default='user_defalt.jpg')
     following = models.ManyToManyField('self', verbose_name='팔로잉', related_name='followers',symmetrical=False, blank=True)
 
-
+    point = models.IntegerField(default=0)
     objects = UserManager()
 
     USERNAME_FIELD = 'email'

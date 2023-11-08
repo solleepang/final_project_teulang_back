@@ -1,5 +1,7 @@
 from rest_framework import serializers
 from users.models import User
+from articles.models import ArticleRecipe, RecipeBookmark
+
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework.generics import get_object_or_404
 
@@ -84,13 +86,32 @@ class LoginSerializer(TokenObtainPairSerializer):
         token['user_img'] = user.user_img.url
         return token
 
+  
+# 마이페이지에서 해당 작성자가 쓴 글을 받기 위한 클래스입니다.
+class ArticleRecipeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ArticleRecipe  
+        fields = "__all__"
+
+class RecipeBookmarkSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = RecipeBookmark
+        fields = ['article_recipe_id']
+  
+# 마이페이지에서 작성자의 정보를 확인하기 위한 클래스입니다.
 class UserInfoSerializer(serializers.ModelSerializer):
+    
+    articles_recipe = ArticleRecipeSerializer(many=True, read_only=True)
+    bookmarked_articles = RecipeBookmarkSerializer(many=True, read_only=True, source='recipe_bookmark')
+    
     """회원 정보 확인"""
     class Meta:
         model = User
-        fields = ("email", "user_img", )
+        fields = ("email", "user_img", "articles_recipe","nickname","following","bookmarked_articles")
+        # fields = "__all__"
 
 
+# 회원 수정을 위한 클래스입니다.
 class ProfileUpdateSerializer(serializers.ModelSerializer):
     
     user_img = serializers.ImageField(required=False)
@@ -112,48 +133,3 @@ class ProfileUpdateSerializer(serializers.ModelSerializer):
             user.save()
         return user
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-class LoginSerializer(TokenObtainPairSerializer):
-    '''로그인 실패 시 error 메세지를 커스텀하고,  생성되는 토큰의 payload를 커스텀하기 위한 Serializer입니다.'''
-
-    def validate(self, attrs):
-        user = get_object_or_404(User, email=attrs[self.username_field])
-
-        # (미구현) 속도 느려지는 이슈로 주석 처리, 이메일 형식이 유효하지 않을 때 에러 메세지
-        # def is_email_valid(email):
-        #     REGEX_EMAIL = '([A-Za-z0-9]+[.-_])*[A-Za-z0-9]+@[A-Za-z0-9-]+(\.[A-Z|a-z]{2,})+'
-        #     if not re.fullmatch(REGEX_EMAIL, email):
-        #         return "이메일 형식을 확인하세요."
-        # print(email)
-        # is_email_valid(attrs['email'])
-
-        # 전달받은 비밀번호와 사용자의 비밀번호를 비교해 검증하고, 커스텀한 에러 메세지 보내기
-        if check_password(attrs['password'], user.password) == False:
-            raise AuthenticationFailed("사용자를 찾을 수 없습니다. 로그인 정보를 확인하세요.") # password 정보만 틀렸을 때
-        data = super().validate(attrs)
-        return data
-
-    @classmethod
-    def get_token(cls, user):
-        token = super().get_token(user)
-
-        token['user_id'] = user.id
-        token['email'] = user.email
-        token['nickname'] = user.nickname
-        token['user_img'] = user.user_img.url
-
-        return token
