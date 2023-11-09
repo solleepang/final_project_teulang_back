@@ -314,7 +314,7 @@ class RecipeSearchView(APIView):
 
 
 def fetch_and_save_openapi_data(request):
-    url = "http://openapi.foodsafetykorea.go.kr/api/afaef0a5ebf54b1594d2/COOKRCP01/json/1/3"  # API URL 입력 (맨뒤 1124 입력후 urls.py의 경로로 get 요청시 레시피를 가져옵니다.)
+    url = "http://openapi.foodsafetykorea.go.kr/api/afaef0a5ebf54b1594d2/COOKRCP01/json/201/210"  # API URL 입력 (맨뒤 1124 입력후 urls.py의 경로로 get 요청시 레시피를 가져옵니다.)
 
     response = requests.get(url)
 
@@ -344,7 +344,7 @@ def fetch_and_save_openapi_data(request):
             for i in range(1, 21):  # 1에서 20까지의 순서로 데이터가 있음
                 order_key = f"MANUAL{i:02d}"
                 img_key = f"MANUAL_IMG{i:02d}"
-                content = recipe_data.get(order_key, "")
+                content = recipe_data.get(order_key, "")[3:]
                 img_url = recipe_data.get(img_key, "")
                 if content:
                     RecipeOrder.objects.create(
