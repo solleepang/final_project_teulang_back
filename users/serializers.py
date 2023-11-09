@@ -14,22 +14,26 @@ from django.contrib.auth.hashers import check_password
 from rest_framework.exceptions import AuthenticationFailed, NotFound
 import re   # 로그인 시 이메일 주소 유효성 검사를 위함.
 
+
 class UserSerializer(serializers.ModelSerializer):
     '''회원가입시 사용자가 보내는 JSON 형태의 데이터를 역직렬화하고, 유효성 검사를 거쳐 모델 객체 형태의 데이터를 생성하기 위한 Serializer 입니다. '''
 
     # 이메일 중복 확인 에러 메세지 커스텀
     email = serializers.EmailField(
         required=True,
-        validators=[UniqueValidator(queryset=User.objects.all(), message="이미 존재하는 이메일입니다.")
-                    ,EmailValidator(message="이메일 형식이 올바르지 않습니다.")] # 231107/19:36 오류메세지 2개 뜸 "이메일 형식이 올바르지 않습니다.", "유효한 이메일 주소를 입력하십시오." | 이전: 이메일 유효성검사는 TypeError: EmailValidator.__init__() got an unexpected keyword argument 'queryset' 에러 발생 | 이메일 필드 임포트해도 똑같은 오류 발생
+        # 231107/19:36 오류메세지 2개 뜸 "이메일 형식이 올바르지 않습니다.", "유효한 이메일 주소를 입력하십시오."
+        validators=[UniqueValidator(queryset=User.objects.all(
+        ), message="이미 존재하는 이메일입니다."), EmailValidator(message="이메일 형식이 올바르지 않습니다.")]
     )
     # 닉네임 중복 확인 에러 메세지 커스텀
     nickname = serializers.CharField(
         required=True,
-        validators=[UniqueValidator(queryset=User.objects.all(), message="이미 존재하는 닉네임입니다.")]
+        validators=[UniqueValidator(
+            queryset=User.objects.all(), message="이미 존재하는 닉네임입니다.")]
     )
     password = serializers.CharField(write_only=True, required=True)
-    password_check = serializers.CharField(style={'input_type':'password'}, write_only=True)
+    password_check = serializers.CharField(
+        style={'input_type': 'password'}, write_only=True)
 
     class Meta:
         model = User
@@ -39,13 +43,13 @@ class UserSerializer(serializers.ModelSerializer):
     # 비밀번호 유효성 검사와 비밀번호와 확인 비밀번호 일치 확인
     def validate(self, attrs):
         password = attrs.get('password')
-        password_check =attrs.pop('password_check')
+        password_check = attrs.pop('password_check')
         try:
             validate_password(password=password)
         except ValidationError as err:
-            raise serializers.ValidationError({'password':err.messages})
+            raise serializers.ValidationError({'password': err.messages})
         if password != password_check:
-                raise ValidationError("비밀번호와 확인 비밀번호가 일치하지 않습니다. 다시 입력해주세요.")
+            raise ValidationError("비밀번호와 확인 비밀번호가 일치하지 않습니다. 다시 입력해주세요.")
         return attrs
 
     def create(self, validated_data):
@@ -87,21 +91,26 @@ class ArticleRecipeSerializer(serializers.ModelSerializer):
         model = ArticleRecipe
         fields = "__all__"
 
+
 class RecipeBookmarkSerializer(serializers.ModelSerializer):
     class Meta:
         model = RecipeBookmark
         fields = ['article_recipe_id']
 
 # 마이페이지에서 작성자의 정보를 확인하기 위한 클래스입니다.
+
+
 class UserInfoSerializer(serializers.ModelSerializer):
 
     articles_recipe = ArticleRecipeSerializer(many=True, read_only=True)
-    bookmarked_articles = RecipeBookmarkSerializer(many=True, read_only=True, source='recipe_bookmark')
+    bookmarked_articles = RecipeBookmarkSerializer(
+        many=True, read_only=True, source='recipe_bookmark')
 
     """회원 정보 확인"""
     class Meta:
         model = User
-        fields = ("email", "user_img", "articles_recipe","nickname","following","bookmarked_articles")
+        fields = ("email", "user_img", "articles_recipe",
+                  "nickname", "following", "bookmarked_articles")
         # fields = "__all__"
 
 
@@ -111,12 +120,12 @@ class ProfileUpdateSerializer(serializers.ModelSerializer):
     user_img = serializers.ImageField(required=False)
     extra_kwargs = {
         'password': {'write_only': True},
-        'email' : {'reade_only': True}
-        }
+        'email': {'reade_only': True}
+    }
 
     class Meta:
         model = User
-        fields = ['email','nickname', 'password', 'user_img']
+        fields = ['email', 'nickname', 'password', 'user_img']
 
     def update(self, instance, validated_data):
         """회원 수정을 위한 메서드입니다."""
@@ -127,3 +136,9 @@ class ProfileUpdateSerializer(serializers.ModelSerializer):
             user.save()
         return user
 
+
+class UserDataSerializer(serializers.ModelSerializer):
+    """ 레시피 정보에서 유저정보 확인용 데이터입니다. """
+    class Meta:
+        model = User
+        fields = ("email", "user_img", "nickname", "following")
