@@ -66,7 +66,7 @@ class User(AbstractBaseUser):
     password = models.CharField('비밀번호', max_length=255)
     created_at = models.DateTimeField('회원가입일', auto_now_add=True)
     is_admin = models.BooleanField('관리자 권한 여부', default=False)
-    is_active = models.BooleanField('계정 활성화 여부', default=True) # 이메일 인증 완료 시, False로 변경
+    is_active = models.BooleanField('계정 활성화 여부', default=False) # 이메일 인증 완료 시, False로 변경
     is_staff = models.BooleanField('스태브 여부', default=False)
     user_img = models.ImageField('프로필 이미지', upload_to='user/user_img/%Y/%m/%D', default='user_defalt.jpg')
     following = models.ManyToManyField('self', verbose_name='팔로잉', related_name='followers',symmetrical=False, blank=True)
