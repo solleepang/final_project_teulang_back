@@ -107,7 +107,9 @@ class OrderDetailView(APIView):
     # 각 레시피의 조리순서 수정하기 (하나씩 각각)
     def put(self, request, article_recipe_id, recipe_order_id):
         recipe = get_object_or_404(ArticleRecipe, id=article_recipe_id)
-        recipe_order = get_object_or_404(RecipeOrder, id=recipe_order_id)
+        # recipe_order = get_object_or_404(RecipeOrder, id=recipe_order_id) ==> 식재료와 마찬가지로 오류 수정
+        recipe_order = recipe.recipe_order.get(
+            id=recipe_order_id)
         if request.user == recipe.author:  # 해당 레시피 작성자가 아니면 수정 안되게 설정
             serializer = OrderCreateSerializer(recipe_order, data=request.data)
             if serializer.is_valid():
@@ -121,7 +123,8 @@ class OrderDetailView(APIView):
     # 각 레시피의 조리순서 삭제하기 (하나씩 각각)
     def delete(self, request, article_recipe_id, recipe_order_id):
         recipe = get_object_or_404(ArticleRecipe, id=article_recipe_id)
-        recipe_order = get_object_or_404(RecipeOrder, id=recipe_order_id)
+        recipe_order = recipe.recipe_order.get(
+            id=recipe_order_id)
         if request.user == recipe.author:  # 해당 레시피 작성자가 아니면 삭제 안되게 설정
             recipe_order.delete()
             return Response("삭제되었습니다", status=status.HTTP_204_NO_CONTENT)
@@ -142,9 +145,9 @@ class IngredientDetailView(APIView):
     # 각 레시피의 재료 수정하기 (하나씩 각각)
     def put(self, request, article_recipe_id, article_recipe_ingredients_id):
         recipe = get_object_or_404(ArticleRecipe, id=article_recipe_id)
-        recipe_ingredients = get_object_or_404(
-            ArticleRecipeIngredients, id=article_recipe_ingredients_id
-        )
+        # url에서 받아온 recipe_id값과 동일한 recipe 내에서 역참조한 식재료 목록 중 ingredients_id와 같은 값을 갖는 식재료 목록을 하나씩 가져옵니다.
+        recipe_ingredients = recipe.recipe_ingredients.get(
+            id=article_recipe_ingredients_id)
         if request.user == recipe.author:  # 해당 레시피 작성자가 아니면 수정 안되게 설정
             serializer = IngredientCreateSerializer(
                 recipe_ingredients, data=request.data
@@ -160,9 +163,8 @@ class IngredientDetailView(APIView):
     # 각 레시피의 재료 삭제하기 (하나씩 각각)
     def delete(self, request, article_recipe_id, article_recipe_ingredients_id):
         recipe = get_object_or_404(ArticleRecipe, id=article_recipe_id)
-        recipe_ingredients = get_object_or_404(
-            ArticleRecipeIngredients, id=article_recipe_ingredients_id
-        )
+        recipe_ingredients = recipe.recipe_ingredients.get(
+            id=article_recipe_ingredients_id)
         if request.user == recipe.author:  # 해당 레시피 작성자가 아니면 삭제 안되게 설정
             recipe_ingredients.delete()
             return Response("삭제되었습니다", status=status.HTTP_204_NO_CONTENT)
@@ -248,7 +250,8 @@ class CommentView(APIView):
         """댓글 작성"""
         serializer = RecipeCommentSerializer(data=request.data)
         if serializer.is_valid():
-            serializer.save(author=request.user, recipe_id=article_recipe_id)
+            serializer.save(author=request.user,
+                            article_recipe_id=article_recipe_id)
             return Response("댓글이 작성되었습니다", status=status.HTTP_201_CREATED)
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
