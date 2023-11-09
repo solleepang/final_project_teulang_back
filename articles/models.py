@@ -14,7 +14,8 @@ class ArticleRecipe(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     # 입력하지 않았을때 해당값은 False 입니다.
     api_recipe = models.BooleanField(default=False)
-    recipe_thumbnail = models.ImageField(blank=True)  # thumbnail로 이름 변경
+    recipe_thumbnail = models.ImageField(
+        blank=True, upload_to='article/recipe_thumbnail', default='recipe_defalt.jpg')  # thumbnail로 이름 변경
 
     def __str__(self):
         return str(self.title)
