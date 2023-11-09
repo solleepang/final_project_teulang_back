@@ -21,7 +21,7 @@ class UserSerializer(serializers.ModelSerializer):
     # 이메일 중복 확인 에러 메세지 커스텀
     email = serializers.EmailField(
         required=True,
-        # 231107/19:36 오류메세지 2개 뜸 "이메일 형식이 올바르지 않습니다.", "유효한 이메일 주소를 입력하십시오." | 이전: 이메일 유효성검사는 TypeError: EmailValidator.__init__() got an unexpected keyword argument 'queryset' 에러 발생 | 이메일 필드 임포트해도 똑같은 오류 발생
+        # 231107/19:36 오류메세지 2개 뜸 "이메일 형식이 올바르지 않습니다.", "유효한 이메일 주소를 입력하십시오."
         validators=[UniqueValidator(queryset=User.objects.all(
         ), message="이미 존재하는 이메일입니다."), EmailValidator(message="이메일 형식이 올바르지 않습니다.")]
     )
@@ -61,24 +61,17 @@ class UserSerializer(serializers.ModelSerializer):
 
 
 class LoginSerializer(TokenObtainPairSerializer):
-    '''로그인시 생성되는 토큰의 payload를 커스텀하기 위한 Serializer입니다.'''
     '''로그인 실패 시 error 메세지를 커스텀하고,  생성되는 토큰의 payload를 커스텀하기 위한 Serializer입니다.'''
 
     def validate(self, attrs):
-        user = get_object_or_404(User, email=attrs[self.username_field])
 
-        # (미구현) 속도 느려지는 이슈로 주석 처리, 이메일 형식이 유효하지 않을 때 에러 메세지
-        # def is_email_valid(email):
-        #     REGEX_EMAIL = '([A-Za-z0-9]+[.-_])*[A-Za-z0-9]+@[A-Za-z0-9-]+(\.[A-Z|a-z]{2,})+'
-        #     if not re.fullmatch(REGEX_EMAIL, email):
-        #         return "이메일 형식을 확인하세요."
-        # print(email)
-        # is_email_valid(attrs['email'])
+        user = get_object_or_404(User, email=attrs['email'])    # 사용자의 정보를 찾을 수 없을 때 404 에러 뱉어냄
 
-        # 전달받은 비밀번호와 사용자의 비밀번호를 비교해 검증하고, 커스텀한 에러 메세지 보내기
-        if check_password(attrs['password'], user.password) == False:
-            raise AuthenticationFailed(
-                "사용자를 찾을 수 없습니다. 로그인 정보를 확인하세요.")  # password 정보만 틀렸을 때
+        # 전달받은 데이터와 사용자의 데이터의 이메일/비밀번호를 비교해 검증하고, 커스텀한 에러 메세지 보내기
+        if attrs['email'] != user.email:
+            raise AuthenticationFailed("로그인에 실패했습니다. 로그인 정보를 확인하세요.") # 이메일 틀렸을 때
+        elif check_password(attrs['password'], user.password) == False:
+            raise AuthenticationFailed("로그인에 실패했습니다. 로그인 정보를 확인하세요.") # 비밀번호 틀렸을 때
         data = super().validate(attrs)
         return data
 

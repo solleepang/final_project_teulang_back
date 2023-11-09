@@ -25,8 +25,7 @@ from articles.serializers import (
 from users.models import User
 from django.core.exceptions import ObjectDoesNotExist
 import json
-from dotenv import load_dotenv
-import os
+from teulang.settings import env
 
 class RecipeView(APIView):
     # 레시피 전체 불러오기
@@ -316,14 +315,9 @@ class RecipeSearchView(APIView):
 
 
 def fetch_and_save_openapi_data(request):
-    # env파일 경로
-    # dotenv_path = '/path/to/your/.env'
-
-    # env파일 로드
-    load_dotenv() # 기본 폴더위치라서 따로 지정해주지 않아도됩니다.
 
     # api키 받기
-    api_key = os.getenv('API_KEY')
+    api_key = env('API_KEY')
 
     url = f"http://openapi.foodsafetykorea.go.kr/api/{api_key}/COOKRCP01/json/1000/1124"  # API URL 입력 (맨뒤 1124 입력후 urls.py의 경로로 get 요청시 레시피를 가져옵니다.)
 

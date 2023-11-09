@@ -1,10 +1,8 @@
 # Created by https://www.toptal.com/developers/gitignore/api/visualstudiocode,windows,macos,python,django
 # Edit at https://www.toptal.com/developers/gitignore?templates=visualstudiocode,windows,macos,python,django
 
-# env
+# environment variable
 .env
-
-
 
 ### Django ###
 *.log
