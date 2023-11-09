@@ -47,8 +47,7 @@ class RecipeView(APIView):
         ingredients = request.data["recipe_ingredients"].split(",")
         for ingredient in ingredients:
             ingredient_data = {"ingredients": ingredient}
-            serializer_ingredients = IngredientCreateSerializer(
-                data=ingredient_data)
+            serializer_ingredients = IngredientCreateSerializer(data=ingredient_data)
             if serializer_ingredients.is_valid():
                 serializer_ingredients.save(article_recipe_id=recipe.id)
             else:
@@ -190,8 +189,7 @@ class StarRateView(APIView):
             return Response("자신의 글에는 별점을 매길 수 없습니다.", status=status.HTTP_403_FORBIDDEN)
 
         try:
-            StarRate.objects.get(
-                user_id=user, article_recipe_id=article_recipe_id)
+            StarRate.objects.get(user_id=user, article_recipe_id=article_recipe_id)
         except ObjectDoesNotExist:
             # 별점이 존재하지 않으면 새로 추가
             serializer = StarRateSerializer(data=request.data)
@@ -313,7 +311,7 @@ class RecipeSearchView(APIView):
 
 def fetch_and_save_openapi_data(request):
     # api키 받기
-    api_key = env('API_KEY')
+    api_key = env("API_KEY")
 
     # API URL 입력 (맨뒤 1124 입력후 urls.py의 경로로 get 요청시 레시피를 가져옵니다.)
     url = f"http://openapi.foodsafetykorea.go.kr/api/{api_key}/COOKRCP01/json/1000/1124"
@@ -345,7 +343,7 @@ def fetch_and_save_openapi_data(request):
             for i in range(1, 21):  # 1에서 20까지의 순서로 데이터가 있음
                 order_key = f"MANUAL{i:02d}"
                 img_key = f"MANUAL_IMG{i:02d}"
-                content = recipe_data.get(order_key, "")
+                content = recipe_data.get(order_key, "")[3:]
                 img_url = recipe_data.get(img_key, "")
                 if content:
                     RecipeOrder.objects.create(
