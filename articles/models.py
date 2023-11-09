@@ -12,12 +12,9 @@ class ArticleRecipe(models.Model):
     )  # 레시피 간단 설명 추가됨
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    # ingredients = models.TextField() // foreignkey로 새 테이블 생성
-    # star_avg = models.FloatField(null=True, blank=True) //삭제
     # 입력하지 않았을때 해당값은 False 입니다.
     api_recipe = models.BooleanField(default=False)
     recipe_thumbnail = models.ImageField(blank=True)  # thumbnail로 이름 변경
-    # bookmark_count = models.IntegerField(null=True, blank=True) //삭제
 
     def __str__(self):
         return str(self.title)
