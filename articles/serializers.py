@@ -91,8 +91,11 @@ class RecipeSerializer(serializers.ModelSerializer):
     def get_star_avg(self, obj):
         """ 해당 게시글 별점 평균 """
         star_rate = StarRate.objects.filter(article_recipe_id=obj.id)
-        star_avg = sum([star_rate[i].star_rate for i in range(
-            len(star_rate))])/len(star_rate)
+        if len(star_rate) < 1:
+            star_avg = 0
+        else:
+            star_avg = sum([star_rate[i].star_rate for i in range(
+                len(star_rate))])/len(star_rate)
         return star_avg
 
     def get_bookmark_count(self, obj):
