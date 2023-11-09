@@ -12,6 +12,30 @@ from django.core.exceptions  import ValidationError
 
 from django.contrib.auth.hashers import check_password
 
+# 새로운 사용자를 생성한 후에 이메일 확인 토큰을 생성하고 사용자 모델에 저장합니다. 이메일 인증 링크를 사용자의 이메일 주소로 전송합니다.
+from django.contrib.auth.tokens import default_token_generator
+from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
+from django.utils.encoding import force_bytes, force_str
+from django.core.mail import EmailMessage
+
+
+class EmailVerificationView(APIView):
+    def get(self, request, uidb64, token):
+        try:
+            uid = force_str(urlsafe_base64_decode(uidb64))
+            user = User.objects.get(id=uid)
+
+            if default_token_generator.check_token(user, token):
+                user.is_active = True # 이메일 확인 여부 필드(is_email_verified)를 정의하면, 그것으로 대체 예정
+                user.save()
+                return Response({"message": "이메일 확인이 완료되었습니다."}, status=status.HTTP_200_OK)
+            else:
+                return Response({"message": "이메일 확인 링크가 잘못되었습니다."}, status=status.HTTP_400_BAD_REQUEST)
+        except User.DoesNotExist:
+            return Response({"message": "사용자를 찾을 수 없습니다."}, status=status.HTTP_400_BAD_REQUEST)
+
+
+
 
 class SignupView(APIView):
     def post(self, request):
@@ -19,6 +43,23 @@ class SignupView(APIView):
         serializer = UserSerializer(data=request.data)
         if serializer.is_valid(raise_exception=True):   # 오류 메세지 커스텀을 위해서
             user= serializer.save()
+
+            # 토큰 생성
+            uid = urlsafe_base64_encode(force_bytes(user.pk))
+            token = default_token_generator.make_token(user)
+
+            # 이메일에 확인 링크 포함하여 보내기
+            verification_url = f"http://127.0.0.1:8000/users/verify-email/{uid}/{token}/"
+
+            # 전송할 이메일의 정보
+            subject = "털랭 회원가입 시 등록한 이메일을 인증해주세요." # 메일 제목
+            message = f'다음 링크를 클릭해, 계정을 활성하기 위한 털래의 회원 이메일 인증을 진행하세요: {verification_url}' # 메일 내용
+            from_email = 'teulang@naver.com'
+            recipient_list = [user.email]
+
+            # 메일 전송
+            EmailMessage(subject=subject, body=message,from_email=from_email, to=recipient_list).send()
+
             return Response({"message":"회원가입이 완료되었습니다."}, status=status.HTTP_201_CREATED)
         else:
             return Response({"message":serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
