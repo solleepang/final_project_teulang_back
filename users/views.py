@@ -1,6 +1,7 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
+from rest_framework.permissions import IsAuthenticated
 from articles.models import ArticleRecipe
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework.generics import get_object_or_404
@@ -139,3 +140,23 @@ class UserDetailView(APIView):
             return Response({"message": "회원 탈퇴 완료."}, status=status.HTTP_204_NO_CONTENT)
         else:
             return Response({"detail": "비밀번호 불일치."}, status=status.HTTP_403_FORBIDDEN)
+
+class FollowView(APIView):
+    """
+    본인을 제외한 다른 사용자를 팔로우 합니다.
+    """
+    permission_classes=[IsAuthenticated]
+
+    def post(self, request, user_id):
+        to_user = get_object_or_404(User, pk=user_id)
+        from_user = request.user
+
+        if from_user.id != to_user.id:  # 본인 팔로우 못하게 막기
+            if from_user in to_user.followers.all():
+                to_user.followers.remove(from_user)
+                return Response({"message": "팔로우를 취소합니다."}, status=status.HTTP_200_OK)
+            else:
+                to_user.followers.add(from_user)
+                return Response({"message": "팔로우 합니다."}, status=status.HTTP_200_OK)
+        else:
+            return Response({"message": "본인을 팔로우하지 못합니다."}, status=status.HTTP_400_BAD_REQUEST)
