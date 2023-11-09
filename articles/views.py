@@ -25,8 +25,8 @@ from articles.serializers import (
 from users.models import User
 from django.core.exceptions import ObjectDoesNotExist
 import json
-from teulang.settings import env
-
+from dotenv import load_dotenv
+import os
 
 class RecipeView(APIView):
     # 레시피 전체 불러오기
@@ -35,33 +35,14 @@ class RecipeView(APIView):
         serializer = RecipeSerializer(recipes, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
-    # 레시피, 재료, 순서 생성
+    # 레시피 작성하기(몸통부분)
     def post(self, request):
-        # 레시피 저장
         serializer = RecipeCreateSerializer(data=request.data)
         if serializer.is_valid():
-            recipe = serializer.save(author=request.user)
+            serializer.save(author=request.user)
+            return Response(serializer.data, status=status.HTTP_200_OK)
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        # 재료 저장
-        ingredients = request.data["recipe_ingredients"].split(",")
-        for ingredient in ingredients:
-            ingredient_data = {"ingredients": ingredient}
-            serializer_ingredients = IngredientCreateSerializer(
-                data=ingredient_data)
-            if serializer_ingredients.is_valid():
-                serializer_ingredients.save(article_recipe_id=recipe.id)
-            else:
-                return Response("재료를 확인해주세요.", status=status.HTTP_400_BAD_REQUEST)
-        # 순서 저장
-        orders = request.data["recipe_order"]
-        for order in orders:
-            serializer_order = OrderCreateSerializer(data=order)
-            if serializer_order.is_valid():
-                serializer_order.save(article_recipe_id=recipe.id)
-            else:
-                return Response("순서를 확인해주세요.", status=status.HTTP_400_BAD_REQUEST)
-        return Response("레시피, 재료, 순서가 정상적으로 저장되었습니다.", status=status.HTTP_200_OK)
 
 
 class RecipeDetailView(APIView):
@@ -102,6 +83,19 @@ class OrderView(APIView):
         serializer = OrderSerializer(recipe_orders, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
+    # 각 레시피의 조리순서 작성하기
+    def post(self, request, article_recipe_id):
+        recipe = get_object_or_404(ArticleRecipe, id=article_recipe_id)
+        if request.user == recipe.author:  # 해당 레시피 작성자가 아니면 작성 안되게 설정
+            serializer = OrderCreateSerializer(data=request.data)
+            if serializer.is_valid():
+                serializer.save(article_recipe_id=article_recipe_id)
+                return Response(serializer.data, status=status.HTTP_200_OK)
+            else:
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            return Response("권한이 없습니다", status=status.HTTP_403_FORBIDDEN)
+
 
 class OrderDetailView(APIView):
     # 각 레시피의 조리순서 수정하기 (하나씩 각각)
@@ -136,6 +130,19 @@ class IngredientView(APIView):
         recipe_ingredients = recipe.recipe_ingredients.all()
         serializer = IngredientSerializer(recipe_ingredients, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+    # 각 레시피의 재료 작성하기
+    def post(self, request, article_recipe_id):
+        recipe = get_object_or_404(ArticleRecipe, id=article_recipe_id)
+        if request.user == recipe.author:  # 해당 레시피 작성자가 아니면 작성 안되게 설정
+            serializer = IngredientCreateSerializer(data=request.data)
+            if serializer.is_valid():
+                serializer.save(article_recipe_id=article_recipe_id)
+                return Response(serializer.data, status=status.HTTP_200_OK)
+            else:
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            return Response("권한이 없습니다", status=status.HTTP_403_FORBIDDEN)
 
 
 class IngredientDetailView(APIView):
@@ -188,8 +195,7 @@ class StarRateView(APIView):
             return Response("자신의 글에는 별점을 매길 수 없습니다.", status=status.HTTP_403_FORBIDDEN)
 
         try:
-            StarRate.objects.get(
-                user_id=user, article_recipe_id=article_recipe_id)
+            StarRate.objects.get(user_id=user, article_recipe_id=article_recipe_id)
         except ObjectDoesNotExist:
             # 별점이 존재하지 않으면 새로 추가
             serializer = StarRateSerializer(data=request.data)
@@ -308,12 +314,19 @@ class RecipeSearchView(APIView):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
-def fetch_and_save_openapi_data(request):
-    # api키 받기
-    api_key = env('API_KEY')
 
-    # API URL 입력 (맨뒤 1124 입력후 urls.py의 경로로 get 요청시 레시피를 가져옵니다.)
-    url = f"http://openapi.foodsafetykorea.go.kr/api/{api_key}/COOKRCP01/json/1000/1124"
+def fetch_and_save_openapi_data(request):
+    # env파일 경로
+    # dotenv_path = '/path/to/your/.env'
+
+    # env파일 로드
+    load_dotenv() # 기본 폴더위치라서 따로 지정해주지 않아도됩니다.
+
+    # api키 받기
+    api_key = os.getenv('API_KEY')
+
+    url = f"http://openapi.foodsafetykorea.go.kr/api/{api_key}/COOKRCP01/json/500/1124"  # API URL 입력 (맨뒤 1124 입력후 urls.py의 경로로 get 요청시 레시피를 가져옵니다.)
+
     response = requests.get(url)
 
     if response.status_code == 200:
