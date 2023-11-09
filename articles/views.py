@@ -27,6 +27,7 @@ from django.core.exceptions import ObjectDoesNotExist
 import json
 from teulang.settings import env
 
+
 class RecipeView(APIView):
     # 레시피 전체 불러오기
     def get(self, request):
@@ -194,7 +195,8 @@ class StarRateView(APIView):
             return Response("자신의 글에는 별점을 매길 수 없습니다.", status=status.HTTP_403_FORBIDDEN)
 
         try:
-            StarRate.objects.get(user_id=user, article_recipe_id=article_recipe_id)
+            StarRate.objects.get(
+                user_id=user, article_recipe_id=article_recipe_id)
         except ObjectDoesNotExist:
             # 별점이 존재하지 않으면 새로 추가
             serializer = StarRateSerializer(data=request.data)
@@ -253,7 +255,8 @@ class CommentView(APIView):
         """댓글 작성"""
         serializer = RecipeCommentSerializer(data=request.data)
         if serializer.is_valid():
-            serializer.save(author=request.user, recipe_id=article_recipe_id)
+            serializer.save(author=request.user,
+                            article_recipe_id=article_recipe_id)
             return Response("댓글이 작성되었습니다", status=status.HTTP_201_CREATED)
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -313,13 +316,13 @@ class RecipeSearchView(APIView):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
-
 def fetch_and_save_openapi_data(request):
 
     # api키 받기
     api_key = env('API_KEY')
 
-    url = f"http://openapi.foodsafetykorea.go.kr/api/{api_key}/COOKRCP01/json/1000/1124"  # API URL 입력 (맨뒤 1124 입력후 urls.py의 경로로 get 요청시 레시피를 가져옵니다.)
+    # API URL 입력 (맨뒤 1124 입력후 urls.py의 경로로 get 요청시 레시피를 가져옵니다.)
+    url = f"http://openapi.foodsafetykorea.go.kr/api/{api_key}/COOKRCP01/json/1000/1124"
 
     response = requests.get(url)
 
