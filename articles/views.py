@@ -47,20 +47,31 @@ class RecipeView(APIView):
         ingredients = request.data["recipe_ingredients"].split(",")
         for ingredient in ingredients:
             ingredient_data = {"ingredients": ingredient}
-            serializer_ingredients = IngredientCreateSerializer(data=ingredient_data)
+            serializer_ingredients = IngredientCreateSerializer(
+                data=ingredient_data)
             if serializer_ingredients.is_valid():
                 serializer_ingredients.save(article_recipe_id=recipe.id)
             else:
                 return Response("재료를 확인해주세요.", status=status.HTTP_400_BAD_REQUEST)
-        # 순서 저장
-        orders = request.data["recipe_order"]
-        for order in orders:
-            serializer_order = OrderCreateSerializer(data=order)
-            if serializer_order.is_valid():
-                serializer_order.save(article_recipe_id=recipe.id)
+        # 조리 순서와 이미지 저장
+        orders = eval(request.data["recipe_order"])
+        for i in range(1, len(orders)+1):
+            # 조리 순서 이미지 없으면 null, request body에 조리 순서 이미지의 키값 없으면 null
+            recipe_img = request.data.get(
+                f'{i}') if request.data.get(f'{i}') else None
+            order_image_data = {
+                "order": i,
+                "content": orders[i-1]["content"],
+                "recipe_img": recipe_img,
+            }
+            order_image_serializer = OrderCreateSerializer(
+                data=order_image_data)
+            if order_image_serializer.is_valid():
+                order_image_serializer.save(article_recipe_id=recipe.id)
             else:
                 return Response("순서를 확인해주세요.", status=status.HTTP_400_BAD_REQUEST)
-        return Response("레시피, 재료, 순서가 정상적으로 저장되었습니다.", status=status.HTTP_200_OK)
+        final_serializer = RecipeSerializer(recipe)
+        return Response(final_serializer.data, status=status.HTTP_200_OK)
 
 
 class RecipeDetailView(APIView):
@@ -189,7 +200,8 @@ class StarRateView(APIView):
             return Response("자신의 글에는 별점을 매길 수 없습니다.", status=status.HTTP_403_FORBIDDEN)
 
         try:
-            StarRate.objects.get(user_id=user, article_recipe_id=article_recipe_id)
+            StarRate.objects.get(
+                user_id=user, article_recipe_id=article_recipe_id)
         except ObjectDoesNotExist:
             # 별점이 존재하지 않으면 새로 추가
             serializer = StarRateSerializer(data=request.data)
@@ -314,7 +326,7 @@ def fetch_and_save_openapi_data(request):
     api_key = env("API_KEY")
 
     # API URL 입력 (맨뒤 1124 입력후 urls.py의 경로로 get 요청시 레시피를 가져옵니다.)
-    url = f"http://openapi.foodsafetykorea.go.kr/api/{api_key}/COOKRCP01/json/1000/1124"
+    url = f"http://openapi.foodsafetykorea.go.kr/api/{api_key}/COOKRCP01/json/1000/1010"
     response = requests.get(url)
 
     if response.status_code == 200:
