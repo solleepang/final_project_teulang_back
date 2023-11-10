@@ -31,6 +31,7 @@ class UserCreationForm(forms.ModelForm):
     def save(self, commit=True):
         # Save the provided password in hashed format
         user = super().save(commit=False)
+        user.is_email_verified = True # 어드민에서 유저 생성 시, 이메일 검증 완료한 상태로 함.
         user.set_password(self.cleaned_data["password1"])
         if commit:
             user.save()
@@ -42,7 +43,7 @@ class UserChangeForm(forms.ModelForm):
 
     class Meta:
         model = User
-        fields = ["email","password", "nickname","user_img","is_admin", "is_active", "is_staff","following","point"]
+        fields = ["email","password", "nickname","user_img","is_admin", "is_active","is_email_verified", "is_staff","following","point"]
 
 
 class UserAdmin(BaseUserAdmin):
@@ -52,7 +53,7 @@ class UserAdmin(BaseUserAdmin):
     list_display = ["id","email","nickname","is_admin","user_img","point"]
     list_filter = ["is_admin"]
     fieldsets = [
-        (None, {"fields": ["email","nickname","password","is_active","is_staff","user_img","point"]}),
+        (None, {"fields": ["email","nickname","password","is_active","is_email_verified","is_staff","user_img","point"]}),
         ("Permissions", {"fields": ["is_admin"]}),
     ]
     # add_fieldsets is not a standard ModelAdmin attribute. UserAdmin
