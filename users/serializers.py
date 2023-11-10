@@ -70,7 +70,8 @@ class LoginSerializer(TokenObtainPairSerializer):
 
     def validate(self, attrs):
 
-        user = get_object_or_404(User, email=attrs['email'])    # 사용자의 정보를 찾을 수 없을 때 404 에러 뱉어냄
+        # 사용자의 정보를 찾을 수 없을 때 404 에러 뱉어냄
+        user = get_object_or_404(User, email=attrs['email'])
 
         # 전달받은 데이터와 사용자의 데이터의 이메일/비밀번호를 비교해 검증하고, 커스텀한 에러 메세지 보내기
         if user.is_active == False:
@@ -78,7 +79,7 @@ class LoginSerializer(TokenObtainPairSerializer):
         elif attrs['email'] != user.email:
             raise AuthenticationFailed("로그인에 실패했습니다. 로그인 정보를 확인하세요.") # 이메일 틀렸을 때
         elif check_password(attrs['password'], user.password) == False:
-            raise AuthenticationFailed("로그인에 실패했습니다. 로그인 정보를 확인하세요.") # 비밀번호 틀렸을 때
+            raise AuthenticationFailed("로그인에 실패했습니다. 로그인 정보를 확인하세요.")  # 비밀번호 틀렸을 때
         data = super().validate(attrs)
         return data
 
