@@ -76,7 +76,10 @@ class RecipeSerializer(serializers.ModelSerializer):
     bookmark_count = serializers.SerializerMethodField()
 
     def get_author(self, obj):
-        return obj.author.nickname
+        if obj.author:
+            return obj.author.nickname
+        else:
+            return "탈퇴한 회원"
 
     class Meta:
         model = ArticleRecipe
@@ -84,9 +87,12 @@ class RecipeSerializer(serializers.ModelSerializer):
 
     def get_user_data(self, obj):
         """ 해당 게시글 작성한 유저 정보 : 이메일,프로필,닉네임,팔로우 """
-        user = User.objects.get(id=obj.author.id)
-        info = UserDataSerializer(user)
-        return info.data
+        if obj.author:
+            user = User.objects.get(id=obj.author.id)
+            info = UserDataSerializer(user)
+            return info.data
+        else:
+            return "탈퇴한 회원"
 
     def get_star_avg(self, obj):
         """ 해당 게시글 별점 평균 """
