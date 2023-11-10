@@ -28,7 +28,8 @@ class RecipeOrder(models.Model):
         related_name="recipe_order",  # order_set -> recipe_order
     )
     content = models.TextField()
-    recipe_img = models.ImageField(blank=True)
+    recipe_img = models.ImageField(
+        null=True, blank=True, upload_to='article/recipe_order_img', )
     order = models.IntegerField()
 
     def __str__(self):
