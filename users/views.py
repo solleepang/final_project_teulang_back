@@ -105,7 +105,7 @@ class LoginView(TokenObtainPairView):
     serializer_class = LoginSerializer
 
 
-# 사용자 정보 및 회원정보 수정
+# 사용자 정보 확인
 class UserDetailView(APIView):
     """
     사용자의 정보를 get요청으로 받아야합니다.
@@ -115,16 +115,20 @@ class UserDetailView(APIView):
         user = get_object_or_404(User, pk=user_id)
         serializer = UserInfoSerializer(user)
         return Response(serializer.data, status=status.HTTP_200_OK)
+    
+
+# 사용자 정보 수정 및 삭제
+class UserUpdateView(APIView):
 
     """
     로그인한 사람의 정보를 put요청으로 수정해야합니다.
     """
-
+    permission_classes = [IsAuthenticated]
     def put(self, request, user_id, format=None):
         if not request.user.is_authenticated or request.user.id != user_id:
-            Response({"detail": "권한이 없습니다."}, status=status.HTTP_403_FORBIDDEN)
-        serializer = ProfileUpdateSerializer(
-            request.user, data=request.data, partial=True)
+            return Response({"detail": "권한이 없습니다."}, status=status.HTTP_403_FORBIDDEN)
+            
+        serializer = ProfileUpdateSerializer(request.user, data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)

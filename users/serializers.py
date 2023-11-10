@@ -70,7 +70,8 @@ class LoginSerializer(TokenObtainPairSerializer):
 
     def validate(self, attrs):
 
-        user = get_object_or_404(User, email=attrs['email'])    # 사용자의 정보를 찾을 수 없을 때 404 에러 뱉어냄
+        # 사용자의 정보를 찾을 수 없을 때 404 에러 뱉어냄
+        user = get_object_or_404(User, email=attrs['email'])
 
         # 전달받은 데이터와 사용자의 데이터의 이메일/비밀번호를 비교해 검증하고, 커스텀한 에러 메세지 보내기
         if user.is_active == False:
@@ -78,7 +79,7 @@ class LoginSerializer(TokenObtainPairSerializer):
         elif attrs['email'] != user.email:
             raise AuthenticationFailed("로그인에 실패했습니다. 로그인 정보를 확인하세요.") # 이메일 틀렸을 때
         elif check_password(attrs['password'], user.password) == False:
-            raise AuthenticationFailed("로그인에 실패했습니다. 로그인 정보를 확인하세요.") # 비밀번호 틀렸을 때
+            raise AuthenticationFailed("로그인에 실패했습니다. 로그인 정보를 확인하세요.")  # 비밀번호 틀렸을 때
         data = super().validate(attrs)
         return data
 
@@ -133,10 +134,32 @@ class ProfileUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ['email', 'nickname', 'password', 'user_img']
+        
+    # 비밀번호 유효성검사입니다.
+    def validate_password(self, value):
+        try:
+            validate_password(value)
+        except ValidationError as e:
+            raise serializers.ValidationError(e.messages)
+
+        # Additional password complexity checks
+        if (len(value) < 8
+            or not (contains_uppercase_letter(value) or contains_lowercase_letter(value))
+            or not contains_number(value)
+            or not contains_special_character(value)):
+            raise serializers.ValidationError("비밀번호는 8자 이상, 문자, 숫자, 특수문자 조합이어야 합니다.") # 400 non_field_errors
+
+        return value
 
     def update(self, instance, validated_data):
         """회원 수정을 위한 메서드입니다."""
         password = validated_data.pop("password", None)
+        
+        # 비밀번호 유효성 검사
+        if password:
+            password = self.validate_password(password)
+        
+        
         user = super().update(instance, validated_data)
         if password:
             user.set_password(password)
@@ -148,4 +171,4 @@ class UserDataSerializer(serializers.ModelSerializer):
     """ 레시피 정보에서 유저정보 확인용 데이터입니다. """
     class Meta:
         model = User
-        fields = ("email", "user_img", "nickname", "following")
+        fields = ("id", "email", "user_img", "nickname", "following")
