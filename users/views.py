@@ -27,8 +27,8 @@ class EmailVerificationView(APIView):
             user = User.objects.get(id=uid)
 
             if default_token_generator.check_token(user, token):
-                # 이메일 확인 여부 필드(is_email_verified)를 정의하면, 그것으로 대체 예정
-                user.is_active = True
+                # 이메일 확인돼서, True로 변경
+                user.is_email_verified = True
                 user.save()
                 return Response({"message": "이메일 확인이 완료되었습니다."}, status=status.HTTP_200_OK)
             else:

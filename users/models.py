@@ -32,6 +32,7 @@ class UserManager(BaseUserManager):
         user.is_admin = True
         user.is_staff = True
         user.is_active = True
+        user.is_email_verified =True
         user.save(using=self._db)
         return user
 
@@ -59,6 +60,7 @@ class User(AbstractBaseUser):
     - is_active :  계정 활성화 여부를 가립니다.
         - 이메일 인증 기능 구현 시 default=False로 변경해야 합니다.
     - is_staff : 스태프 권한 여부입니다.
+    - is_email_verified : 이메일 인증 여부에 대해 담고 있습니다.
     """
 
     email = models.EmailField('이메일', max_length=255, unique=True)
@@ -66,10 +68,12 @@ class User(AbstractBaseUser):
     password = models.CharField('비밀번호', max_length=255)
     created_at = models.DateTimeField('회원가입일', auto_now_add=True)
     is_admin = models.BooleanField('관리자 권한 여부', default=False)
-    is_active = models.BooleanField('계정 활성화 여부', default=False) # 이메일 인증 완료 시, False로 변경
+    is_active = models.BooleanField('계정 활성화 여부', default=True)
     is_staff = models.BooleanField('스태브 여부', default=False)
     user_img = models.ImageField('프로필 이미지', upload_to='user/user_img/%Y/%m/%D', default='user_defalt.jpg')
     following = models.ManyToManyField('self', verbose_name='팔로잉', related_name='followers',symmetrical=False, blank=True)
+    is_email_verified = models.BooleanField('이메일 검증 여부', default=False)
+    verification_token = models.CharField('사용자 검증 토큰', max_length=255)
 
     point = models.IntegerField(default=0)
     objects = UserManager()
@@ -90,6 +94,3 @@ class User(AbstractBaseUser):
     def has_module_perms(self, app_label):
         return True
 
-    # @property is_staff 직접 정의하여 주석 처리함.
-    # def is_staff(self):
-    #     return self.is_admin
