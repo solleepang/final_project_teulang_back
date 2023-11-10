@@ -165,3 +165,4 @@ class UserDataSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ("email", "user_img", "nickname", "following","user_id")
+
