@@ -134,10 +134,32 @@ class ProfileUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ['email', 'nickname', 'password', 'user_img']
+        
+    # 비밀번호 유효성검사입니다.
+    def validate_password(self, value):
+        try:
+            validate_password(value)
+        except ValidationError as e:
+            raise serializers.ValidationError(e.messages)
+
+        # Additional password complexity checks
+        if (len(value) < 8
+            or not (contains_uppercase_letter(value) or contains_lowercase_letter(value))
+            or not contains_number(value)
+            or not contains_special_character(value)):
+            raise serializers.ValidationError("비밀번호는 8자 이상, 문자, 숫자, 특수문자 조합이어야 합니다.") # 400 non_field_errors
+
+        return value
 
     def update(self, instance, validated_data):
         """회원 수정을 위한 메서드입니다."""
         password = validated_data.pop("password", None)
+        
+        # 비밀번호 유효성 검사
+        if password:
+            password = self.validate_password(password)
+        
+        
         user = super().update(instance, validated_data)
         if password:
             user.set_password(password)
