@@ -12,8 +12,7 @@ from django.core.validators import EmailValidator
 from django.contrib.auth.hashers import check_password
 
 from rest_framework.exceptions import AuthenticationFailed, NotFound
-import re   # 로그인 시 이메일 주소 유효성 검사를 위함.
-
+from users.validators import contains_special_character, contains_uppercase_letter, contains_lowercase_letter, contains_number
 
 class UserSerializer(serializers.ModelSerializer):
     '''회원가입시 사용자가 보내는 JSON 형태의 데이터를 역직렬화하고, 유효성 검사를 거쳐 모델 객체 형태의 데이터를 생성하기 위한 Serializer 입니다. '''
@@ -50,6 +49,12 @@ class UserSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({'password': err.messages})
         if password != password_check:
             raise ValidationError("비밀번호와 확인 비밀번호가 일치하지 않습니다. 다시 입력해주세요.")
+        # 8
+        if (len(password) < 8
+            or not (contains_uppercase_letter(password) or contains_lowercase_letter(password))
+            or not contains_number(password)
+            or not contains_special_character(password)):
+            raise serializers.ValidationError("비밀번호는 8자 이상, 문자, 숫자, 특수문자 조합이어야 합니다.") # 400 non_field_errors
         return attrs
 
     def create(self, validated_data):
@@ -69,12 +74,12 @@ class LoginSerializer(TokenObtainPairSerializer):
         user = get_object_or_404(User, email=attrs['email'])
 
         # 전달받은 데이터와 사용자의 데이터의 이메일/비밀번호를 비교해 검증하고, 커스텀한 에러 메세지 보내기
-        if attrs['email'] != user.email:
-            raise AuthenticationFailed(
-                "로그인에 실패했습니다. 로그인 정보를 확인하세요.")  # 이메일 틀렸을 때
+        if user.is_active == False:
+            raise AuthenticationFailed("이메일 인증이 필요합니다. 회원 가입시 이용한 이메일을 확인해주세요.")
+        elif attrs['email'] != user.email:
+            raise AuthenticationFailed("로그인에 실패했습니다. 로그인 정보를 확인하세요.") # 이메일 틀렸을 때
         elif check_password(attrs['password'], user.password) == False:
-            raise AuthenticationFailed(
-                "로그인에 실패했습니다. 로그인 정보를 확인하세요.")  # 비밀번호 틀렸을 때
+            raise AuthenticationFailed("로그인에 실패했습니다. 로그인 정보를 확인하세요.")  # 비밀번호 틀렸을 때
         data = super().validate(attrs)
         return data
 
