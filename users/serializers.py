@@ -133,10 +133,25 @@ class ProfileUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ['email', 'nickname', 'password', 'user_img']
+        
+    # 비밀번호 유효성검사입니다.
+    def validate_password(self, value):
+        try:
+            validate_password(value)
+        except ValidationError as e:
+            raise serializers.ValidationError(e.messages)
+        return value    
+    
 
     def update(self, instance, validated_data):
         """회원 수정을 위한 메서드입니다."""
         password = validated_data.pop("password", None)
+        
+        # 비밀번호 유효성 검사
+        if password:
+            self.validate_password(password)
+        
+        
         user = super().update(instance, validated_data)
         if password:
             user.set_password(password)
@@ -148,4 +163,4 @@ class UserDataSerializer(serializers.ModelSerializer):
     """ 레시피 정보에서 유저정보 확인용 데이터입니다. """
     class Meta:
         model = User
-        fields = ("email", "user_img", "nickname", "following")
+        fields = ("email", "user_img", "nickname", "following","user_id")
