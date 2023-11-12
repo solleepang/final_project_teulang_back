@@ -37,6 +37,11 @@ class RecipeView(APIView):
 
     # 레시피, 재료, 순서 생성
     def post(self, request):
+        # 레시피 작성 권한 설정(로그인, 이메일 인증)
+        if not request.user.is_authenticated:
+            return Response({"message":"로그인이 필요합니다."}, status=status.HTTP_401_UNAUTHORIZED)
+        if request.user.is_email_verified == False:
+            return Response({"message":"이메일 인증이 필요합니다."}, status=status.HTTP_403_FORBIDDEN)
         # 레시피 저장
         serializer = RecipeCreateSerializer(data=request.data)
         if serializer.is_valid():
@@ -258,6 +263,11 @@ class CommentView(APIView):
 
     def post(self, request, article_recipe_id):
         """댓글 작성"""
+        # 권한 설정
+        if not request.user.is_authenticated:
+            return Response({"message":"로그인이 필요합니다."}, status=status.HTTP_401_UNAUTHORIZED)
+        if request.user.is_email_verified == False:
+            return Response({"message":"이메일 인증이 필요합니다."}, status=status.HTTP_403_FORBIDDEN)
         serializer = RecipeCommentSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save(author=request.user,
