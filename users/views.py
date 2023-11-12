@@ -5,8 +5,8 @@ from rest_framework.permissions import IsAuthenticated
 from articles.models import ArticleRecipe
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework.generics import get_object_or_404
-from users.serializers import LoginSerializer, UserSerializer, ProfileUpdateSerializer, UserInfoSerializer
-from users.models import User
+from users.serializers import LoginSerializer, UserSerializer, ProfileUpdateSerializer, UserInfoSerializer, ResetPasswordSerializer
+from users.models import User, VerificationCode
 
 from django.core.validators import validate_email
 from django.core.exceptions import ValidationError
@@ -18,6 +18,85 @@ from django.contrib.auth.tokens import default_token_generator
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils.encoding import force_bytes, force_str
 from django.core.mail import EmailMessage
+
+import random
+from django.utils import timezone
+
+
+class ResetPasswordView(APIView):
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, user_id):
+        """ 랜덤인 숫자 인증 코드를 생성해서 요청 사용자의 이메일에 발송합니다."""
+        if request.user.id != user_id:
+            return Response({"message":"잘못된 요청입니다. 로그인 유저와 url 유저가 다릅니다"}, status=status.HTTP_403_FORBIDDEN)
+        else:
+            # 랜덤으로 6자리 인증 숫자 코드 생성
+            randon_num = random.randint(000000,999999)
+
+            # 인증 코드 DB에 저장
+            request_user = get_object_or_404(User, pk=user_id)
+            VerificationCode.objects.create(
+                user=request_user,
+                code=randon_num,
+            )
+
+            # 인증 코드의 유효기간 설정
+            expiration_period = 10
+
+            # 전송할 이메일의 정보
+            subject = "털랭 본인확인을 위한 인증 코드를 확인해주세요."  # 메일 제목
+            # 메일 내용
+            message = f'인증 코드는 {randon_num}입니다. {expiration_period}분 안에 인증 코드를 입력해 본인 인증을 완료해주세요.'
+            from_email = 'teulang@naver.com'
+            recipient_list = [request_user.email]
+
+            # 메일 전송
+            EmailMessage(subject=subject, body=message,
+                            from_email=from_email, to=recipient_list).send()
+            return Response({"message": "인증 코드가 담긴 이메일이 전송되었습니다."}, status=status.HTTP_200_OK)
+
+
+    def put(self, request, user_id):    # request body: {"new_password":"새로운 비밀번호", "new_password_check":"새로운 비밀번호 확인"}
+        """현재 비밀번호와 새로운 비밀번호, 새로운 비밀번호 확인을 받아서, 검증한 뒤 비밀번호를 재설정합니다."""
+        request_user = get_object_or_404(User, pk=user_id)
+        print(request.data)
+        if request.user.id != request_user.id:
+            return Response({"message": "권한이 없습니다."}, status=status.HTTP_403_FORBIDDEN)
+
+        serializer = ResetPasswordSerializer(request.user, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response({"message":"비밀번호가 재설정되었습니다."}, status=status.HTTP_200_OK)
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+
+class EmailPasswordVerificationView(APIView):
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, user_id): # request body: {"code":"숫자 6자리 코드"}
+        """비밀번호 재설정-이메일을 통한 본인인증을 위해 보낸 인증 코드와 사용자가 입력한 이메일 인증 코드가 일치한지 확인합니다."""
+        # 입력한 code값
+        request_code = request.data['code']
+
+        # 사용자에게 보내진 이메일 인증 코드
+        verification = VerificationCode.objects.filter(user=user_id).order_by('-created_at')
+        verification_code = verification[0].code
+
+        # 이메일 인증 유효기간과 인증코드의 생성된 기간
+        expiration_period = 10
+        generated_period = timezone.now() - verification[0].created_at
+
+        # DB에 저장된 인증 코드와 유저가 입력한 코드의 일치 여부와 유효기간이 지났는지 확인
+        if verification_code == request_code:
+            if generated_period.seconds < 60*expiration_period: # 600초=10분=유효기간이 지나지 않은 인증 코드 확인
+                return Response({"message":"본인인증 완료됐습니다. 비밀번호 재설정이 가능합니다."}, status=status.HTTP_200_OK)
+            return Response({"message":"인증코드가 만료되었습니다. 본인인증을 다시 시도해주세요."}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({"message":"코드가 맞지 않습니다. 다시 입력해주세요."})
 
 
 class EmailVerificationView(APIView):
@@ -62,7 +141,7 @@ class SignupView(APIView):
             EmailMessage(subject=subject, body=message,
                          from_email=from_email, to=recipient_list).send()
 
-            return Response({"message": "회원가입이 완료되었습니다."}, status=status.HTTP_201_CREATED)
+            return Response({"message": "회원가입이 완료되었습니다. 인증 이메일이 전송되었습니다."}, status=status.HTTP_201_CREATED)
         else:
             return Response({"message": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
 
