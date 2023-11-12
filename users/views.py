@@ -30,7 +30,7 @@ class ResetPasswordView(APIView):
     def get(self, request, user_id):
         """ 랜덤인 숫자 인증 코드를 생성해서 요청 사용자의 이메일에 발송합니다."""
         if request.user.id != user_id:
-            return Response({"message":"잘못된 요청입니다. 로그인 유저와 url 유저가 다릅니다"}, status=status.HTTP_403_FORBIDDEN)
+            return Response({"message":"권한 없습니다. 로그인 유저와 url 유저가 다릅니다"}, status=status.HTTP_403_FORBIDDEN)
         else:
             # 랜덤으로 6자리 인증 숫자 코드 생성
             randon_num = random.randint(000000,999999)
@@ -96,7 +96,7 @@ class EmailPasswordVerificationView(APIView):
             if generated_period.seconds < 60*expiration_period: # 600초=10분=유효기간이 지나지 않은 인증 코드 확인
                 return Response({"message":"본인인증 완료됐습니다. 비밀번호 재설정이 가능합니다."}, status=status.HTTP_200_OK)
             return Response({"message":"인증코드가 만료되었습니다. 본인인증을 다시 시도해주세요."}, status=status.HTTP_400_BAD_REQUEST)
-        return Response({"message":"코드가 맞지 않습니다. 다시 입력해주세요."})
+        return Response({"message":"코드가 맞지 않습니다. 다시 입력해주세요."}, status=status.HTTP_400_BAD_REQUEST)
 
 
 class EmailVerificationView(APIView):
