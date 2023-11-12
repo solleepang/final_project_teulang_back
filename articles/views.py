@@ -302,22 +302,19 @@ class RecipeSearchView(APIView):
         """검색된 재료 포함하는 레시피 구한 후 object 반환"""
         quart_string = request.GET["q"]
         ingredients = quart_string.split(",")
-        recipe_ids = []
-        compare_ids = []
+        recipes = []
         for i in range(len(ingredients)):
-            ingredients_list = ArticleRecipeIngredients.objects.filter(
-                ingredients__contains=ingredients[i].strip()
-            )
-            for j in range(len(ingredients_list)):
-                if i < 1:
-                    recipe_ids.append(ingredients_list[j].article_recipe)
-                else:
-                    if ingredients_list[j].article_recipe in recipe_ids:
-                        compare_ids.append(ingredients_list[j].article_recipe)
-            if len(ingredients) > 1 and i > 0:
-                recipe_ids = compare_ids
-                compare_ids = []
-        serializer = RecipeSerializer(recipe_ids, many=True)
+            if i < 1:
+                recipes = ArticleRecipe.objects.filter(
+                    recipe_ingredients__ingredients__contains=ingredients[i].strip(
+                    )
+                )
+            else:
+                recipes = recipes.filter(
+                    recipe_ingredients__ingredients__contains=ingredients[i].strip(
+                    )
+                )
+        serializer = RecipeSerializer(recipes, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
