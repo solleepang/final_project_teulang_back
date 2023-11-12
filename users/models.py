@@ -73,7 +73,6 @@ class User(AbstractBaseUser):
     user_img = models.ImageField('프로필 이미지', upload_to='user/user_img/%Y/%m/%D', default='user_defalt.jpg')
     following = models.ManyToManyField('self', verbose_name='팔로잉', related_name='followers',symmetrical=False, blank=True)
     is_email_verified = models.BooleanField('이메일 검증 여부', default=False)
-    verification_token = models.CharField('사용자 검증 토큰', max_length=255)
 
     point = models.IntegerField(default=0)
     objects = UserManager()
@@ -94,3 +93,17 @@ class User(AbstractBaseUser):
     def has_module_perms(self, app_label):
         return True
 
+
+class VerificationCode(models.Model):
+    """
+    비밀번호 재설정을 위한 이메일에 담긴 숫자 인증 코드 저장을 위한 모델
+
+    - created_at : 인증을 위한 숫자 코드의 생성시간입니다.
+        - 이 숫자 코드의 유효 기간을 구현하기 위한 필드입니다.
+    - user : 특정 사용자의 인증 코드인지 판단하기 위한 필드입니다.
+    - code : 사용자가 비밀번호 재설정을 원해서 이메일 인증 코드 발송을 택하면, 생성돼 DB에 저장됩니다.
+    """
+
+    created_at = models.DateTimeField('인증 코드 생성시간', auto_now_add=True)
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, blank=True, null=True, verbose_name="이메일 전송된 인증 코드", related_name="codes")
+    code = models.CharField('숫자 인증 코드', max_length=6)
