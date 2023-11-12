@@ -53,15 +53,25 @@ class RecipeView(APIView):
                 serializer_ingredients.save(article_recipe_id=recipe.id)
             else:
                 return Response("재료를 확인해주세요.", status=status.HTTP_400_BAD_REQUEST)
-        # 순서 저장
-        orders = request.data["recipe_order"]
-        for order in orders:
-            serializer_order = OrderCreateSerializer(data=order)
-            if serializer_order.is_valid():
-                serializer_order.save(article_recipe_id=recipe.id)
+        # 조리 순서와 이미지 저장
+        orders = eval(request.data["recipe_order"])
+        for i in range(1, len(orders)+1):
+            # 조리 순서 이미지 없으면 null, request body에 조리 순서 이미지의 키값 없으면 null
+            recipe_img = request.data.get(
+                f'{i}') if request.data.get(f'{i}') else None
+            order_image_data = {
+                "order": i,
+                "content": orders[i-1]["content"],
+                "recipe_img": recipe_img,
+            }
+            order_image_serializer = OrderCreateSerializer(
+                data=order_image_data)
+            if order_image_serializer.is_valid():
+                order_image_serializer.save(article_recipe_id=recipe.id)
             else:
                 return Response("순서를 확인해주세요.", status=status.HTTP_400_BAD_REQUEST)
-        return Response("레시피, 재료, 순서가 정상적으로 저장되었습니다.", status=status.HTTP_200_OK)
+        final_serializer = RecipeSerializer(recipe)
+        return Response(final_serializer.data, status=status.HTTP_200_OK)
 
 
 class RecipeDetailView(APIView):
@@ -292,22 +302,19 @@ class RecipeSearchView(APIView):
         """검색된 재료 포함하는 레시피 구한 후 object 반환"""
         quart_string = request.GET["q"]
         ingredients = quart_string.split(",")
-        recipe_ids = []
-        compare_ids = []
+        recipes = []
         for i in range(len(ingredients)):
-            ingredients_list = ArticleRecipeIngredients.objects.filter(
-                ingredients__contains=ingredients[i].strip()
-            )
-            for j in range(len(ingredients_list)):
-                if i < 1:
-                    recipe_ids.append(ingredients_list[j].article_recipe)
-                else:
-                    if ingredients_list[j].article_recipe in recipe_ids:
-                        compare_ids.append(ingredients_list[j].article_recipe)
-            if len(ingredients) > 1 and i > 0:
-                recipe_ids = compare_ids
-                compare_ids = []
-        serializer = RecipeSerializer(recipe_ids, many=True)
+            if i < 1:
+                recipes = ArticleRecipe.objects.filter(
+                    recipe_ingredients__ingredients__contains=ingredients[i].strip(
+                    )
+                )
+            else:
+                recipes = recipes.filter(
+                    recipe_ingredients__ingredients__contains=ingredients[i].strip(
+                    )
+                )
+        serializer = RecipeSerializer(recipes, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
@@ -316,7 +323,7 @@ def fetch_and_save_openapi_data(request):
     api_key = env("API_KEY")
 
     # API URL 입력 (맨뒤 1124 입력후 urls.py의 경로로 get 요청시 레시피를 가져옵니다.)
-    url = f"http://openapi.foodsafetykorea.go.kr/api/{api_key}/COOKRCP01/json/1000/1124"
+    url = f"http://openapi.foodsafetykorea.go.kr/api/{api_key}/COOKRCP01/json/1000/1010"
     response = requests.get(url)
 
     if response.status_code == 200:
