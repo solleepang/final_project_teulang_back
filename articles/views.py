@@ -262,7 +262,7 @@ class CommentView(APIView):
         if serializer.is_valid():
             serializer.save(author=request.user,
                             article_recipe_id=article_recipe_id)
-            return Response("댓글이 작성되었습니다", status=status.HTTP_201_CREATED)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -274,7 +274,7 @@ class CommentView(APIView):
         if request.user == comment.author:
             if serializer.is_valid():
                 serializer.save()
-                return Response("댓글이 수정되었습니다", status=status.HTTP_200_OK)
+                return Response(serializer.data, status=status.HTTP_200_OK)
             else:
                 return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         elif (
