@@ -47,7 +47,8 @@ class RecipeView(APIView):
         ingredients = request.data["recipe_ingredients"].split(",")
         for ingredient in ingredients:
             ingredient_data = {"ingredients": ingredient}
-            serializer_ingredients = IngredientCreateSerializer(data=ingredient_data)
+            serializer_ingredients = IngredientCreateSerializer(
+                data=ingredient_data)
             if serializer_ingredients.is_valid():
                 serializer_ingredients.save(article_recipe_id=recipe.id)
             else:
@@ -189,7 +190,8 @@ class StarRateView(APIView):
             return Response("자신의 글에는 별점을 매길 수 없습니다.", status=status.HTTP_403_FORBIDDEN)
 
         try:
-            StarRate.objects.get(user_id=user, article_recipe_id=article_recipe_id)
+            StarRate.objects.get(
+                user_id=user, article_recipe_id=article_recipe_id)
         except ObjectDoesNotExist:
             # 별점이 존재하지 않으면 새로 추가
             serializer = StarRateSerializer(data=request.data)
@@ -250,7 +252,7 @@ class CommentView(APIView):
         if serializer.is_valid():
             serializer.save(author=request.user,
                             article_recipe_id=article_recipe_id)
-            return Response("댓글이 작성되었습니다", status=status.HTTP_201_CREATED)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -262,7 +264,7 @@ class CommentView(APIView):
         if request.user == comment.author:
             if serializer.is_valid():
                 serializer.save()
-                return Response("댓글이 수정되었습니다", status=status.HTTP_200_OK)
+                return Response(serializer.data, status=status.HTTP_200_OK)
             else:
                 return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         elif (

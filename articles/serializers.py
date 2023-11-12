@@ -61,9 +61,24 @@ class RecipeBookmarkSerializer(serializers.ModelSerializer):
 
 
 class RecipeCommentSerializer(serializers.ModelSerializer):
+    user_data = serializers.SerializerMethodField()
+    article_recipe = serializers.SerializerMethodField()
+
     class Meta:
         model = CommentArticlesRecipe
-        fields = ("content",)
+        fields = "__all__"
+
+    def get_user_data(self, obj):
+        """ 해당 댓글 작성한 유저 데이터(이메일, 프로필, 닉네임, 팔로우)"""
+        if obj.author:
+            user = User.objects.get(id=obj.author.id)
+            info = UserDataSerializer(user)
+            return info.data
+        else:
+            return "탈퇴한 회원"
+
+    def get_article_recipe(self, obj):
+        return obj.article_recipe.id
 
 
 class RecipeSerializer(serializers.ModelSerializer):
