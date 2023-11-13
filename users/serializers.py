@@ -86,7 +86,7 @@ class UserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ("email", "nickname", "password", "password_check")
+        fields = ("email", "nickname", "password", "password_check","following")
         extra_kwargs = {'password': {'write_only': True}}
 
     # 비밀번호 유효성 검사와 비밀번호와 확인 비밀번호 일치 확인
