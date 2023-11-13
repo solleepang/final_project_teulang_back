@@ -176,14 +176,14 @@ class UserInfoSerializer(serializers.ModelSerializer):
 class ProfileUpdateSerializer(serializers.ModelSerializer):
 
     user_img = serializers.ImageField(required=False)
+    email = serializers.EmailField(read_only=True)  
     extra_kwargs = {
-        'password': {'write_only': True},
-        'email': {'reade_only': True}
+        'password': {'write_only': True}
     }
 
     class Meta:
         model = User
-        fields = ['email', 'nickname', 'password', 'user_img']
+        fields = ['email','nickname', 'password', 'user_img']
         
     # 비밀번호 유효성검사입니다.
     def validate_password(self, value):
