@@ -14,6 +14,56 @@ from django.contrib.auth.hashers import check_password
 from rest_framework.exceptions import AuthenticationFailed, NotFound
 from users.validators import contains_special_character, contains_uppercase_letter, contains_lowercase_letter, contains_number
 
+class ResetPasswordSerializer(serializers.ModelSerializer):
+    new_password = serializers.CharField(write_only=True, required=True)
+    new_password_check = serializers.CharField(
+        style={'input_type': 'password'}, write_only=True)
+
+    class Meta:
+        model = User
+        fields = ("new_password", "new_password_check")
+        extra_kwargs = {'password': {'write_only': True}}
+
+
+    # 비밀번호의 유효성검사
+    def validate(self, value):
+        password = value.get('new_password')
+        password_check = value.pop('new_password_check')
+
+        # 새로운 비밀번호 유효성 검사
+        try:
+            validate_password(password=password)
+        except ValidationError as e:
+            raise serializers.ValidationError(e.messages)
+
+        # 새로운 비밀번호와 비밀번호 확인 일치 여부 확인
+        if password != password_check:
+            raise ValidationError("비밀번호와 확인 비밀번호가 일치하지 않습니다. 다시 입력해주세요.")
+
+        # 비밀번호 8자 이상, 문자/숫자/특수문자 포함 조건
+        if (len(password) < 8
+            or not (contains_uppercase_letter(password) or contains_lowercase_letter(password))
+            or not contains_number(password)
+            or not contains_special_character(password)):
+            raise serializers.ValidationError("비밀번호는 8자 이상, 문자, 숫자, 특수문자 조합이어야 합니다.") # 400 non_field_errors
+
+        return value
+
+
+    def update(self, instance, validated_data):
+        """비밀번호 재설정을 위한 메서드입니다."""
+        password = validated_data.pop("new_password", None)
+
+        # 비밀번호 유효성 검사
+        password = validate_password(password)
+
+        user = super().update(instance, validated_data)
+        if password:
+            user.set_password(password)
+            user.save()
+        return user
+
+
 class UserSerializer(serializers.ModelSerializer):
     '''회원가입시 사용자가 보내는 JSON 형태의 데이터를 역직렬화하고, 유효성 검사를 거쳐 모델 객체 형태의 데이터를 생성하기 위한 Serializer 입니다. '''
 
@@ -36,7 +86,7 @@ class UserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ("email", "nickname", "password", "password_check")
+        fields = ("email", "nickname", "password", "password_check","following")
         extra_kwargs = {'password': {'write_only': True}}
 
     # 비밀번호 유효성 검사와 비밀번호와 확인 비밀번호 일치 확인
@@ -126,14 +176,14 @@ class UserInfoSerializer(serializers.ModelSerializer):
 class ProfileUpdateSerializer(serializers.ModelSerializer):
 
     user_img = serializers.ImageField(required=False)
+    email = serializers.EmailField(read_only=True)  
     extra_kwargs = {
-        'password': {'write_only': True},
-        'email': {'reade_only': True}
+        'password': {'write_only': True}
     }
 
     class Meta:
         model = User
-        fields = ['email', 'nickname', 'password', 'user_img']
+        fields = ['email','nickname', 'password', 'user_img']
         
     # 비밀번호 유효성검사입니다.
     def validate_password(self, value):
