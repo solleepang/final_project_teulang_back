@@ -26,13 +26,28 @@ from users.models import User
 from django.core.exceptions import ObjectDoesNotExist
 import json
 from teulang.settings import env
+from django.core.paginator import Paginator
+from django.db.models import Count
 
 
 class RecipeView(APIView):
-    # 레시피 전체 불러오기
+    # 레시피 불러오기(전체, 정렬(인기순/최신순))
     def get(self, request):
+        """ 전체,인기순,최신순 parameter 값에 따라 20개의 게시물 반환
+            param page = int (None 이면 1)
+            param option = latest(최신순) or bookmark(인기순) """
+        
+        page = request.GET.get("page", 1) if request.GET.get("page", 1) else 1
+        option = request.GET.get("option")
+        # 옵션 없을 경우 id 순
         recipes = ArticleRecipe.objects.all()
-        serializer = RecipeSerializer(recipes, many=True)
+        if option == "latest": #최신순
+            recipes = recipes.order_by('-created_at')
+        elif option == "bookmark": #인기순(북마크 많은 순)
+            recipes = recipes.annotate(bookmark_count=Count('recipe_bookmark')).order_by('-bookmark_count')       
+        all_recipes_paginator = Paginator(recipes, 20)
+        page_obj = all_recipes_paginator.page(page)
+        serializer = RecipeSerializer(page_obj, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     # 레시피, 재료, 순서 생성
@@ -309,23 +324,41 @@ class CommentView(APIView):
 
 class RecipeSearchView(APIView):
     def get(self, request):
-        """검색된 재료 포함하는 레시피 구한 후 object 반환"""
-        quart_string = request.GET["q"]
+        """ 검색된 재료 포함하는 레시피 구한 후 전체,인기순,최신순 parameter 값에 따라 20개의 게시물 반환
+            param page = int (None 이면 1)
+            param option = latest(최신순) or bookmark(인기순) """
+        
+        # 검색 재료 포함하는 레시피 포함
+        quart_string = request.GET.get("q", "")
         ingredients = quart_string.split(",")
         recipes = []
         for i in range(len(ingredients)):
+            print(i)
             if i < 1:
-                recipes = ArticleRecipe.objects.filter(
-                    recipe_ingredients__ingredients__contains=ingredients[i].strip(
-                    )
-                )
+                recipes = ArticleRecipe.objects.filter(recipe_ingredients__ingredients__contains=ingredients[i].strip()).distinct()
             else:
-                recipes = recipes.filter(
-                    recipe_ingredients__ingredients__contains=ingredients[i].strip(
-                    )
-                )
-        serializer = RecipeSerializer(recipes, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+                recipes = recipes.filter(recipe_ingredients__ingredients__contains=ingredients[i].strip()).distinct()
+        # 최신순/인기순 옵션과 페이지네이션
+        page = request.GET.get("page", 1) if request.GET.get("page", 1) else 1
+        option = request.GET.get("option")
+
+        # 옵션 없을 경우 id 순
+        if option == "latest":  # 최신순
+            recipes = recipes.order_by('-created_at')
+        elif option == "bookmark":  # 인기순(북마크 많은 순)
+            recipes = recipes.annotate(bookmark_count=Count('recipe_bookmark')).order_by('-bookmark_count')
+
+        recipes_paginator = Paginator(recipes, 20)
+        if int(page) > recipes_paginator.num_pages:
+            # 존재하는 것보다 많은 페이지 요청시 메시지 반환
+            return Response("해당 페이지가 없습니다.", status=status.HTTP_404_NOT_FOUND)
+        page_obj = recipes_paginator.page(page)
+        paginator_data = {
+            "filtered_recipes_count": recipes_paginator.count, # 검색된 레시피 개수
+            "pages_num": recipes_paginator.num_pages # 총 페이지 수
+        }
+        serializer = RecipeSerializer(page_obj, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK, headers=paginator_data)
 
 
 def fetch_and_save_openapi_data(request):
