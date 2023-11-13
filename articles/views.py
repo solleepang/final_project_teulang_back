@@ -52,6 +52,7 @@ class RecipeView(APIView):
 
     # 레시피, 재료, 순서 생성
     def post(self, request):
+        """ 레시피 생성 - 재료/순서 함께 생성 """
         # 레시피 작성 권한 설정(로그인, 이메일 인증)
         if not request.user.is_authenticated:
             return Response({"message":"로그인이 필요합니다."}, status=status.HTTP_401_UNAUTHORIZED)
@@ -64,32 +65,36 @@ class RecipeView(APIView):
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         # 재료 저장
-        ingredients = request.data["recipe_ingredients"].split(",")
-        for ingredient in ingredients:
-            ingredient_data = {"ingredients": ingredient}
-            serializer_ingredients = IngredientCreateSerializer(
-                data=ingredient_data)
-            if serializer_ingredients.is_valid():
-                serializer_ingredients.save(article_recipe_id=recipe.id)
-            else:
-                return Response("재료를 확인해주세요.", status=status.HTTP_400_BAD_REQUEST)
+        ingredients = request.data.get("recipe_ingredients")
+        if ingredients:
+            ingredients = ingredients.split(",")
+            for ingredient in ingredients:
+                ingredient_data = {"ingredients": ingredient}
+                serializer_ingredients = IngredientCreateSerializer(data=ingredient_data)
+                if serializer_ingredients.is_valid():
+                    serializer_ingredients.save(article_recipe_id=recipe.id)
+                else:
+                    return Response(serializer_ingredients.errors, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            pass
         # 조리 순서와 이미지 저장
-        orders = eval(request.data["recipe_order"])
-        for i in range(1, len(orders)+1):
-            # 조리 순서 이미지 없으면 null, request body에 조리 순서 이미지의 키값 없으면 null
-            recipe_img = request.data.get(
-                f'{i}') if request.data.get(f'{i}') else None
-            order_image_data = {
-                "order": i,
-                "content": orders[i-1]["content"],
-                "recipe_img": recipe_img,
-            }
-            order_image_serializer = OrderCreateSerializer(
-                data=order_image_data)
-            if order_image_serializer.is_valid():
-                order_image_serializer.save(article_recipe_id=recipe.id)
-            else:
-                return Response("순서를 확인해주세요.", status=status.HTTP_400_BAD_REQUEST)
+        orders = request.data.get("recipe_order")
+        if orders:
+            orders = eval(orders)
+            for i in range(1, len(orders)+1):
+                recipe_img = request.data.get(f'{i}')
+                order_image_data = {
+                    "order": i,
+                    "content": orders[i-1]["content"],
+                    "recipe_img": recipe_img if recipe_img else None
+                }
+                order_image_serializer = OrderCreateSerializer(data=order_image_data)
+                if order_image_serializer.is_valid():
+                    order_image_serializer.save(article_recipe_id=recipe.id)
+                else:
+                    return Response(order_image_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            pass
         final_serializer = RecipeSerializer(recipe)
         return Response(final_serializer.data, status=status.HTTP_200_OK)
 
@@ -103,16 +108,85 @@ class RecipeDetailView(APIView):
 
     # 레시피 수정하기
     def put(self, request, article_recipe_id):
+        """ 레시피 수정 - 재료/순서 수정,삭제,생성 """
         recipe = get_object_or_404(ArticleRecipe, id=article_recipe_id)
         if request.user == recipe.author:
             serializer = RecipeCreateSerializer(recipe, data=request.data)
+            # 레시피 수정
             if serializer.is_valid():
                 serializer.save()
-                return Response(serializer.data, status=status.HTTP_200_OK)
             else:
                 return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            # 재료 수정
+            ingredients_data = request.data.get("recipe_ingredients")
+            if ingredients_data:
+                ingredients_data = eval(ingredients_data)
+                for ingredient_data in ingredients_data:
+                    try:
+                        ingredient = ArticleRecipeIngredients.objects.get(id=ingredient_data["id"], article_recipe=recipe)
+                    except ObjectDoesNotExist:
+                        # 재료 생성
+                        ingredients_serializer = IngredientCreateSerializer(data=ingredient_data)
+                        if ingredients_serializer.is_valid():
+                            ingredients_serializer.save(article_recipe_id=recipe.id)
+                        else:
+                            return Response(ingredients_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+                    else:
+                        # 재료 수정
+                        ingredients_serializer = IngredientCreateSerializer(ingredient, data=ingredient_data)
+                        if ingredients_serializer.is_valid():
+                            ingredients_serializer.save()
+                        else:
+                            return Response(ingredients_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            else:
+                pass
+            # 순서 수정
+            orders_data = request.data.get("recipe_order")
+            if orders_data:
+                orders_data = eval(orders_data)
+                for order_data in orders_data:
+                    recipe_order_img = request.data.get(f'{order_data["order"]}')
+                    order_data["recipe_img"] = recipe_order_img if recipe_order_img else None
+                    try:
+                        order = RecipeOrder.objects.get(id=order_data["id"], article_recipe=recipe)
+                    except ObjectDoesNotExist:
+                        # 순서 생성
+                        order_serializer = OrderCreateSerializer(data=order_data)
+                        if order_serializer.is_valid():
+                            order_serializer.save(article_recipe_id=recipe.id)
+                        else:
+                            return Response(order_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+                    else:
+                        # 순서 수정
+                        order_serializer = OrderCreateSerializer(order, data=order_data)
+                        if order_serializer.is_valid():
+                            order_serializer.save()
+                        else:
+                            return Response(order_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            else:
+                pass
+            # 재료 삭제
+            delete_ingredients_data = request.data.get("delete_ingredients")
+            if delete_ingredients_data:
+                delete_ingredients_data = eval(delete_ingredients_data)
+                for delete_ingredient in delete_ingredients_data:
+                    ingredient = get_object_or_404(ArticleRecipeIngredients, id=delete_ingredient, article_recipe_id=recipe.id)
+                    ingredient.delete()
+            else:
+                pass
+            # 순서 삭제
+            delete_order_data = request.data.get("delete_order")
+            if delete_order_data:
+                delete_order_data = eval(delete_order_data)
+                for delete_order in delete_order_data:
+                    order = get_object_or_404(RecipeOrder, id=delete_order, article_recipe_id=recipe.id)
+                    order.delete()
+            else:
+                pass
         else:
             return Response("권한이 없습니다", status=status.HTTP_403_FORBIDDEN)
+        final_serializer = RecipeSerializer(recipe)
+        return Response(final_serializer.data, status=status.HTTP_200_OK)
 
     # 레시피 삭제하기
     def delete(self, request, article_recipe_id):
