@@ -1,4 +1,5 @@
 import requests
+from django.http import JsonResponse
 from rest_framework.generics import get_object_or_404
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -377,7 +378,7 @@ def fetch_and_save_openapi_data(request):
     api_key = env("API_KEY")
 
     # API URL 입력 (맨뒤 1124 입력후 urls.py의 경로로 get 요청시 레시피를 가져옵니다.)
-    url = f"http://openapi.foodsafetykorea.go.kr/api/{api_key}/COOKRCP01/json/1000/1010"
+    url = f"http://openapi.foodsafetykorea.go.kr/api/{api_key}/COOKRCP01/json/301/600"
     response = requests.get(url)
 
     if response.status_code == 200:
@@ -416,10 +417,6 @@ def fetch_and_save_openapi_data(request):
                         order=i,
                     )
 
-        return Response(
-            "데이터 불러오기 및 저장 완료", status=status.HTTP_201_CREATED
-        )  # 통일을 위해 Response로 변경
+        return JsonResponse({"message": "데이터 가져오기 및 저장 완료"})
     else:
-        return Response(
-            "데이터 저장에 실패하였습니다.", status=status.HTTP_500_INTERNAL_SERVER_ERROR
-        )  # 통일을 위해 Response로 변경
+        return JsonResponse({"error": "데이터 가져오기 실패"}, status=500)
