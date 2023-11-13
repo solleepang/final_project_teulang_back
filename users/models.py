@@ -32,6 +32,7 @@ class UserManager(BaseUserManager):
         user.is_admin = True
         user.is_staff = True
         user.is_active = True
+        user.is_email_verified =True
         user.save(using=self._db)
         return user
 
@@ -59,6 +60,7 @@ class User(AbstractBaseUser):
     - is_active :  계정 활성화 여부를 가립니다.
         - 이메일 인증 기능 구현 시 default=False로 변경해야 합니다.
     - is_staff : 스태프 권한 여부입니다.
+    - is_email_verified : 이메일 인증 여부에 대해 담고 있습니다.
     """
 
     email = models.EmailField('이메일', max_length=255, unique=True)
@@ -66,10 +68,11 @@ class User(AbstractBaseUser):
     password = models.CharField('비밀번호', max_length=255)
     created_at = models.DateTimeField('회원가입일', auto_now_add=True)
     is_admin = models.BooleanField('관리자 권한 여부', default=False)
-    is_active = models.BooleanField('계정 활성화 여부', default=False) # 이메일 인증 완료 시, False로 변경
+    is_active = models.BooleanField('계정 활성화 여부', default=True)
     is_staff = models.BooleanField('스태브 여부', default=False)
     user_img = models.ImageField('프로필 이미지', upload_to='user/user_img/%Y/%m/%D', default='user_defalt.jpg')
     following = models.ManyToManyField('self', verbose_name='팔로잉', related_name='followers',symmetrical=False, blank=True)
+    is_email_verified = models.BooleanField('이메일 검증 여부', default=False)
 
     point = models.IntegerField(default=0)
     objects = UserManager()
@@ -90,6 +93,17 @@ class User(AbstractBaseUser):
     def has_module_perms(self, app_label):
         return True
 
-    # @property is_staff 직접 정의하여 주석 처리함.
-    # def is_staff(self):
-    #     return self.is_admin
+
+class VerificationCode(models.Model):
+    """
+    비밀번호 재설정을 위한 이메일에 담긴 숫자 인증 코드 저장을 위한 모델
+
+    - created_at : 인증을 위한 숫자 코드의 생성시간입니다.
+        - 이 숫자 코드의 유효 기간을 구현하기 위한 필드입니다.
+    - user : 특정 사용자의 인증 코드인지 판단하기 위한 필드입니다.
+    - code : 사용자가 비밀번호 재설정을 원해서 이메일 인증 코드 발송을 택하면, 생성돼 DB에 저장됩니다.
+    """
+
+    created_at = models.DateTimeField('인증 코드 생성시간', auto_now_add=True)
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, blank=True, null=True, verbose_name="이메일 전송된 인증 코드", related_name="codes")
+    code = models.CharField('숫자 인증 코드', max_length=6)
