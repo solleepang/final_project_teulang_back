@@ -37,6 +37,11 @@ class RecipeView(APIView):
 
     # 레시피, 재료, 순서 생성
     def post(self, request):
+        # 레시피 작성 권한 설정(로그인, 이메일 인증)
+        if not request.user.is_authenticated:
+            return Response({"message":"로그인이 필요합니다."}, status=status.HTTP_401_UNAUTHORIZED)
+        if request.user.is_email_verified == False:
+            return Response({"message":"이메일 인증이 필요합니다."}, status=status.HTTP_403_FORBIDDEN)
         # 레시피 저장
         serializer = RecipeCreateSerializer(data=request.data)
         if serializer.is_valid():
@@ -47,20 +52,31 @@ class RecipeView(APIView):
         ingredients = request.data["recipe_ingredients"].split(",")
         for ingredient in ingredients:
             ingredient_data = {"ingredients": ingredient}
-            serializer_ingredients = IngredientCreateSerializer(data=ingredient_data)
+            serializer_ingredients = IngredientCreateSerializer(
+                data=ingredient_data)
             if serializer_ingredients.is_valid():
                 serializer_ingredients.save(article_recipe_id=recipe.id)
             else:
                 return Response("재료를 확인해주세요.", status=status.HTTP_400_BAD_REQUEST)
-        # 순서 저장
-        orders = request.data["recipe_order"]
-        for order in orders:
-            serializer_order = OrderCreateSerializer(data=order)
-            if serializer_order.is_valid():
-                serializer_order.save(article_recipe_id=recipe.id)
+        # 조리 순서와 이미지 저장
+        orders = eval(request.data["recipe_order"])
+        for i in range(1, len(orders)+1):
+            # 조리 순서 이미지 없으면 null, request body에 조리 순서 이미지의 키값 없으면 null
+            recipe_img = request.data.get(
+                f'{i}') if request.data.get(f'{i}') else None
+            order_image_data = {
+                "order": i,
+                "content": orders[i-1]["content"],
+                "recipe_img": recipe_img,
+            }
+            order_image_serializer = OrderCreateSerializer(
+                data=order_image_data)
+            if order_image_serializer.is_valid():
+                order_image_serializer.save(article_recipe_id=recipe.id)
             else:
                 return Response("순서를 확인해주세요.", status=status.HTTP_400_BAD_REQUEST)
-        return Response("레시피, 재료, 순서가 정상적으로 저장되었습니다.", status=status.HTTP_200_OK)
+        final_serializer = RecipeSerializer(recipe)
+        return Response(final_serializer.data, status=status.HTTP_200_OK)
 
 
 class RecipeDetailView(APIView):
@@ -189,7 +205,8 @@ class StarRateView(APIView):
             return Response("자신의 글에는 별점을 매길 수 없습니다.", status=status.HTTP_403_FORBIDDEN)
 
         try:
-            StarRate.objects.get(user_id=user, article_recipe_id=article_recipe_id)
+            StarRate.objects.get(
+                user_id=user, article_recipe_id=article_recipe_id)
         except ObjectDoesNotExist:
             # 별점이 존재하지 않으면 새로 추가
             serializer = StarRateSerializer(data=request.data)
@@ -246,11 +263,16 @@ class CommentView(APIView):
 
     def post(self, request, article_recipe_id):
         """댓글 작성"""
+        # 권한 설정
+        if not request.user.is_authenticated:
+            return Response({"message":"로그인이 필요합니다."}, status=status.HTTP_401_UNAUTHORIZED)
+        if request.user.is_email_verified == False:
+            return Response({"message":"이메일 인증이 필요합니다."}, status=status.HTTP_403_FORBIDDEN)
         serializer = RecipeCommentSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save(author=request.user,
                             article_recipe_id=article_recipe_id)
-            return Response("댓글이 작성되었습니다", status=status.HTTP_201_CREATED)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -262,7 +284,7 @@ class CommentView(APIView):
         if request.user == comment.author:
             if serializer.is_valid():
                 serializer.save()
-                return Response("댓글이 수정되었습니다", status=status.HTTP_200_OK)
+                return Response(serializer.data, status=status.HTTP_200_OK)
             else:
                 return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         elif (
@@ -290,22 +312,19 @@ class RecipeSearchView(APIView):
         """검색된 재료 포함하는 레시피 구한 후 object 반환"""
         quart_string = request.GET["q"]
         ingredients = quart_string.split(",")
-        recipe_ids = []
-        compare_ids = []
+        recipes = []
         for i in range(len(ingredients)):
-            ingredients_list = ArticleRecipeIngredients.objects.filter(
-                ingredients__contains=ingredients[i].strip()
-            )
-            for j in range(len(ingredients_list)):
-                if i < 1:
-                    recipe_ids.append(ingredients_list[j].article_recipe)
-                else:
-                    if ingredients_list[j].article_recipe in recipe_ids:
-                        compare_ids.append(ingredients_list[j].article_recipe)
-            if len(ingredients) > 1 and i > 0:
-                recipe_ids = compare_ids
-                compare_ids = []
-        serializer = RecipeSerializer(recipe_ids, many=True)
+            if i < 1:
+                recipes = ArticleRecipe.objects.filter(
+                    recipe_ingredients__ingredients__contains=ingredients[i].strip(
+                    )
+                )
+            else:
+                recipes = recipes.filter(
+                    recipe_ingredients__ingredients__contains=ingredients[i].strip(
+                    )
+                )
+        serializer = RecipeSerializer(recipes, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
@@ -314,7 +333,7 @@ def fetch_and_save_openapi_data(request):
     api_key = env("API_KEY")
 
     # API URL 입력 (맨뒤 1124 입력후 urls.py의 경로로 get 요청시 레시피를 가져옵니다.)
-    url = f"http://openapi.foodsafetykorea.go.kr/api/{api_key}/COOKRCP01/json/1000/1124"
+    url = f"http://openapi.foodsafetykorea.go.kr/api/{api_key}/COOKRCP01/json/1000/1010"
     response = requests.get(url)
 
     if response.status_code == 200:
