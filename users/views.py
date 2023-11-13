@@ -150,3 +150,39 @@ class UserUpdateView(APIView):
             return Response({"message": "회원 탈퇴 완료."}, status=status.HTTP_204_NO_CONTENT)
         else:
             return Response({"detail": "비밀번호 불일치."}, status=status.HTTP_403_FORBIDDEN)
+
+
+
+
+
+
+class FollowView(APIView):
+    def get(self, request, user_id):
+        user = User.objects.get(id=user_id)
+        # 유저의 팔로워들
+        follower_serializer = UserSerializer(user.followers, many=True)
+        # 유저가 팔로잉하고 있는 사람들
+        following_serializer = UserSerializer(user.following, many=True)
+        data = {
+            'followers': follower_serializer.data,
+            'following': following_serializer.data,
+        }
+        return Response(data)
+    
+    def post(self, request, user_id):
+        if request.user.is_anonymous:
+            return Response({'message': '로그인이 필요합니다.'}, status=status.HTTP_401_UNAUTHORIZED)
+        me = request.user
+        you = User.objects.get(id=user_id)
+        if me == you:
+            return Response({'message': '본인을 팔로우할 수 없습니다.'},status=status.HTTP_400_BAD_REQUEST)
+        
+        if you.followers.filter(id=me.id).exists():
+            me.following.remove(you)
+            me.save()
+            return Response({'message': '팔로우 취소합니다.'})
+        else:
+            me.following.add(you)
+            me.save()
+            return Response({'message': '팔로우 합니다.'})
+    
