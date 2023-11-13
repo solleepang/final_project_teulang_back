@@ -24,7 +24,6 @@ from articles.serializers import (
 )
 from users.models import User
 from django.core.exceptions import ObjectDoesNotExist
-import json
 from teulang.settings import env
 from django.core.paginator import Paginator
 from django.db.models import Count
@@ -33,18 +32,20 @@ from django.db.models import Count
 class RecipeView(APIView):
     # 레시피 불러오기(전체, 정렬(인기순/최신순))
     def get(self, request):
-        """ 전체,인기순,최신순 parameter 값에 따라 20개의 게시물 반환
-            param page = int (None 이면 1)
-            param option = latest(최신순) or bookmark(인기순) """
-        
+        """전체,인기순,최신순 parameter 값에 따라 20개의 게시물 반환
+        param page = int (None 이면 1)
+        param option = latest(최신순) or bookmark(인기순)"""
+
         page = request.GET.get("page", 1) if request.GET.get("page", 1) else 1
         option = request.GET.get("option")
         # 옵션 없을 경우 id 순
         recipes = ArticleRecipe.objects.all()
-        if option == "latest": #최신순
-            recipes = recipes.order_by('-created_at')
-        elif option == "bookmark": #인기순(북마크 많은 순)
-            recipes = recipes.annotate(bookmark_count=Count('recipe_bookmark')).order_by('-bookmark_count')       
+        if option == "latest":  # 최신순
+            recipes = recipes.order_by("-created_at")
+        elif option == "bookmark":  # 인기순(북마크 많은 순)
+            recipes = recipes.annotate(
+                bookmark_count=Count("recipe_bookmark")
+            ).order_by("-bookmark_count")
         all_recipes_paginator = Paginator(recipes, 20)
         page_obj = all_recipes_paginator.page(page)
         serializer = RecipeSerializer(page_obj, many=True)
@@ -54,9 +55,13 @@ class RecipeView(APIView):
     def post(self, request):
         # 레시피 작성 권한 설정(로그인, 이메일 인증)
         if not request.user.is_authenticated:
-            return Response({"message":"로그인이 필요합니다."}, status=status.HTTP_401_UNAUTHORIZED)
+            return Response(
+                {"message": "로그인이 필요합니다."}, status=status.HTTP_401_UNAUTHORIZED
+            )
         if request.user.is_email_verified == False:
-            return Response({"message":"이메일 인증이 필요합니다."}, status=status.HTTP_403_FORBIDDEN)
+            return Response(
+                {"message": "이메일 인증이 필요합니다."}, status=status.HTTP_403_FORBIDDEN
+            )
         # 레시피 저장
         serializer = RecipeCreateSerializer(data=request.data)
         if serializer.is_valid():
@@ -67,25 +72,22 @@ class RecipeView(APIView):
         ingredients = request.data["recipe_ingredients"].split(",")
         for ingredient in ingredients:
             ingredient_data = {"ingredients": ingredient}
-            serializer_ingredients = IngredientCreateSerializer(
-                data=ingredient_data)
+            serializer_ingredients = IngredientCreateSerializer(data=ingredient_data)
             if serializer_ingredients.is_valid():
                 serializer_ingredients.save(article_recipe_id=recipe.id)
             else:
                 return Response("재료를 확인해주세요.", status=status.HTTP_400_BAD_REQUEST)
         # 조리 순서와 이미지 저장
         orders = eval(request.data["recipe_order"])
-        for i in range(1, len(orders)+1):
+        for i in range(1, len(orders) + 1):
             # 조리 순서 이미지 없으면 null, request body에 조리 순서 이미지의 키값 없으면 null
-            recipe_img = request.data.get(
-                f'{i}') if request.data.get(f'{i}') else None
+            recipe_img = request.data.get(f"{i}") if request.data.get(f"{i}") else None
             order_image_data = {
                 "order": i,
-                "content": orders[i-1]["content"],
+                "content": orders[i - 1]["content"],
                 "recipe_img": recipe_img,
             }
-            order_image_serializer = OrderCreateSerializer(
-                data=order_image_data)
+            order_image_serializer = OrderCreateSerializer(data=order_image_data)
             if order_image_serializer.is_valid():
                 order_image_serializer.save(article_recipe_id=recipe.id)
             else:
@@ -138,8 +140,7 @@ class OrderDetailView(APIView):
     def put(self, request, article_recipe_id, recipe_order_id):
         recipe = get_object_or_404(ArticleRecipe, id=article_recipe_id)
         # recipe_order = get_object_or_404(RecipeOrder, id=recipe_order_id) ==> 식재료와 마찬가지로 오류 수정
-        recipe_order = recipe.recipe_order.get(
-            id=recipe_order_id)
+        recipe_order = recipe.recipe_order.get(id=recipe_order_id)
         if request.user == recipe.author:  # 해당 레시피 작성자가 아니면 수정 안되게 설정
             serializer = OrderCreateSerializer(recipe_order, data=request.data)
             if serializer.is_valid():
@@ -153,8 +154,7 @@ class OrderDetailView(APIView):
     # 각 레시피의 조리순서 삭제하기 (하나씩 각각)
     def delete(self, request, article_recipe_id, recipe_order_id):
         recipe = get_object_or_404(ArticleRecipe, id=article_recipe_id)
-        recipe_order = recipe.recipe_order.get(
-            id=recipe_order_id)
+        recipe_order = recipe.recipe_order.get(id=recipe_order_id)
         if request.user == recipe.author:  # 해당 레시피 작성자가 아니면 삭제 안되게 설정
             recipe_order.delete()
             return Response("삭제되었습니다", status=status.HTTP_204_NO_CONTENT)
@@ -177,7 +177,8 @@ class IngredientDetailView(APIView):
         recipe = get_object_or_404(ArticleRecipe, id=article_recipe_id)
         # url에서 받아온 recipe_id값과 동일한 recipe 내에서 역참조한 식재료 목록 중 ingredients_id와 같은 값을 갖는 식재료 목록을 하나씩 가져옵니다.
         recipe_ingredients = recipe.recipe_ingredients.get(
-            id=article_recipe_ingredients_id)
+            id=article_recipe_ingredients_id
+        )
         if request.user == recipe.author:  # 해당 레시피 작성자가 아니면 수정 안되게 설정
             serializer = IngredientCreateSerializer(
                 recipe_ingredients, data=request.data
@@ -194,7 +195,8 @@ class IngredientDetailView(APIView):
     def delete(self, request, article_recipe_id, article_recipe_ingredients_id):
         recipe = get_object_or_404(ArticleRecipe, id=article_recipe_id)
         recipe_ingredients = recipe.recipe_ingredients.get(
-            id=article_recipe_ingredients_id)
+            id=article_recipe_ingredients_id
+        )
         if request.user == recipe.author:  # 해당 레시피 작성자가 아니면 삭제 안되게 설정
             recipe_ingredients.delete()
             return Response("삭제되었습니다", status=status.HTTP_204_NO_CONTENT)
@@ -220,8 +222,7 @@ class StarRateView(APIView):
             return Response("자신의 글에는 별점을 매길 수 없습니다.", status=status.HTTP_403_FORBIDDEN)
 
         try:
-            StarRate.objects.get(
-                user_id=user, article_recipe_id=article_recipe_id)
+            StarRate.objects.get(user_id=user, article_recipe_id=article_recipe_id)
         except ObjectDoesNotExist:
             # 별점이 존재하지 않으면 새로 추가
             serializer = StarRateSerializer(data=request.data)
@@ -280,13 +281,16 @@ class CommentView(APIView):
         """댓글 작성"""
         # 권한 설정
         if not request.user.is_authenticated:
-            return Response({"message":"로그인이 필요합니다."}, status=status.HTTP_401_UNAUTHORIZED)
+            return Response(
+                {"message": "로그인이 필요합니다."}, status=status.HTTP_401_UNAUTHORIZED
+            )
         if request.user.is_email_verified == False:
-            return Response({"message":"이메일 인증이 필요합니다."}, status=status.HTTP_403_FORBIDDEN)
+            return Response(
+                {"message": "이메일 인증이 필요합니다."}, status=status.HTTP_403_FORBIDDEN
+            )
         serializer = RecipeCommentSerializer(data=request.data)
         if serializer.is_valid():
-            serializer.save(author=request.user,
-                            article_recipe_id=article_recipe_id)
+            serializer.save(author=request.user, article_recipe_id=article_recipe_id)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -324,10 +328,10 @@ class CommentView(APIView):
 
 class RecipeSearchView(APIView):
     def get(self, request):
-        """ 검색된 재료 포함하는 레시피 구한 후 전체,인기순,최신순 parameter 값에 따라 20개의 게시물 반환
-            param page = int (None 이면 1)
-            param option = latest(최신순) or bookmark(인기순) """
-        
+        """검색된 재료 포함하는 레시피 구한 후 전체,인기순,최신순 parameter 값에 따라 20개의 게시물 반환
+        param page = int (None 이면 1)
+        param option = latest(최신순) or bookmark(인기순)"""
+
         # 검색 재료 포함하는 레시피 포함
         quart_string = request.GET.get("q", "")
         ingredients = quart_string.split(",")
@@ -335,18 +339,24 @@ class RecipeSearchView(APIView):
         for i in range(len(ingredients)):
             print(i)
             if i < 1:
-                recipes = ArticleRecipe.objects.filter(recipe_ingredients__ingredients__contains=ingredients[i].strip()).distinct()
+                recipes = ArticleRecipe.objects.filter(
+                    recipe_ingredients__ingredients__contains=ingredients[i].strip()
+                ).distinct()
             else:
-                recipes = recipes.filter(recipe_ingredients__ingredients__contains=ingredients[i].strip()).distinct()
+                recipes = recipes.filter(
+                    recipe_ingredients__ingredients__contains=ingredients[i].strip()
+                ).distinct()
         # 최신순/인기순 옵션과 페이지네이션
         page = request.GET.get("page", 1) if request.GET.get("page", 1) else 1
         option = request.GET.get("option")
 
         # 옵션 없을 경우 id 순
         if option == "latest":  # 최신순
-            recipes = recipes.order_by('-created_at')
+            recipes = recipes.order_by("-created_at")
         elif option == "bookmark":  # 인기순(북마크 많은 순)
-            recipes = recipes.annotate(bookmark_count=Count('recipe_bookmark')).order_by('-bookmark_count')
+            recipes = recipes.annotate(
+                bookmark_count=Count("recipe_bookmark")
+            ).order_by("-bookmark_count")
 
         recipes_paginator = Paginator(recipes, 20)
         if int(page) > recipes_paginator.num_pages:
@@ -354,11 +364,13 @@ class RecipeSearchView(APIView):
             return Response("해당 페이지가 없습니다.", status=status.HTTP_404_NOT_FOUND)
         page_obj = recipes_paginator.page(page)
         paginator_data = {
-            "filtered_recipes_count": recipes_paginator.count, # 검색된 레시피 개수
-            "pages_num": recipes_paginator.num_pages # 총 페이지 수
+            "filtered_recipes_count": recipes_paginator.count,  # 검색된 레시피 개수
+            "pages_num": recipes_paginator.num_pages,  # 총 페이지 수
         }
         serializer = RecipeSerializer(page_obj, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK, headers=paginator_data)
+        return Response(
+            serializer.data, status=status.HTTP_200_OK, headers=paginator_data
+        )
 
 
 def fetch_and_save_openapi_data(request):
@@ -366,7 +378,7 @@ def fetch_and_save_openapi_data(request):
     api_key = env("API_KEY")
 
     # API URL 입력 (맨뒤 1124 입력후 urls.py의 경로로 get 요청시 레시피를 가져옵니다.)
-    url = f"http://openapi.foodsafetykorea.go.kr/api/{api_key}/COOKRCP01/json/1000/1010"
+    url = f"http://openapi.foodsafetykorea.go.kr/api/{api_key}/COOKRCP01/json/301/600"
     response = requests.get(url)
 
     if response.status_code == 200:
@@ -381,7 +393,7 @@ def fetch_and_save_openapi_data(request):
                 author_id=1,  # 작성자 ID는 일단 1번으로 했습니다.
                 title=recipe_data["RCP_NM"],
                 api_recipe=True,
-                recipe_thumbnail=recipe_data["ATT_FILE_NO_MK"],
+                recipe_thumbnail_api=recipe_data["ATT_FILE_NO_MK"],
             )
 
             # 재료 저장
@@ -401,7 +413,7 @@ def fetch_and_save_openapi_data(request):
                     RecipeOrder.objects.create(
                         article_recipe=article_recipe,
                         content=content,
-                        recipe_img=img_url,
+                        recipe_img_api=img_url,
                         order=i,
                     )
 
