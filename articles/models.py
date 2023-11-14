@@ -15,7 +15,11 @@ class ArticleRecipe(models.Model):
     # 입력하지 않았을때 해당값은 False 입니다.
     api_recipe = models.BooleanField(default=False)
     recipe_thumbnail = models.ImageField(
-        blank=True, upload_to='article/recipe_thumbnail', default='recipe_defalt.jpg')  # thumbnail로 이름 변경
+        blank=True, upload_to="article/recipe_thumbnail", default="recipe_defalt.jpg"
+    )  # thumbnail로 이름 변경
+    recipe_thumbnail_api = models.CharField(
+        max_length=1000, null=True, blank=True, default=""
+    )  # 프론트에서 이미지 URL로 보여주기 위해 모델필드 추가
 
     def __str__(self):
         return str(self.title)
@@ -29,8 +33,14 @@ class RecipeOrder(models.Model):
     )
     content = models.TextField()
     recipe_img = models.ImageField(
-        null=True, blank=True, upload_to='article/recipe_order_img', )
+        null=True,
+        blank=True,
+        upload_to="article/recipe_order_img",
+    )
     order = models.IntegerField()
+    recipe_img_api = models.CharField(
+        max_length=1000, null=True, blank=True, default=""
+    )  # 프론트에서 이미지 URL로 보여주기 위해 모델필드 추가
 
     def __str__(self):
         return str(self.article_recipe)
@@ -51,25 +61,35 @@ class ArticleRecipeIngredients(models.Model):
 class StarRate(models.Model):
     star_rate = models.IntegerField(null=True, blank=True)
     user_id = models.ForeignKey(
-        User, on_delete=models.SET_NULL, null=True, related_name="recipe_star_rate")
+        User, on_delete=models.SET_NULL, null=True, related_name="recipe_star_rate"
+    )
     article_recipe_id = models.ForeignKey(
-        ArticleRecipe, on_delete=models.CASCADE, null=True, related_name="recipe_star_rate"
+        ArticleRecipe,
+        on_delete=models.CASCADE,
+        null=True,
+        related_name="recipe_star_rate",
     )
 
 
 class RecipeBookmark(models.Model):
     article_recipe_id = models.ForeignKey(
-        ArticleRecipe, on_delete=models.CASCADE, null=True, related_name="recipe_bookmark"
+        ArticleRecipe,
+        on_delete=models.CASCADE,
+        null=True,
+        related_name="recipe_bookmark",
     )
     user_id = models.ForeignKey(
-        User, on_delete=models.SET_NULL, null=True, related_name="recipe_bookmark")
+        User, on_delete=models.SET_NULL, null=True, related_name="recipe_bookmark"
+    )
 
 
 class CommentArticlesRecipe(models.Model):
     author = models.ForeignKey(
-        User, on_delete=models.SET_NULL, null=True, related_name='user_comment')
-    article_recipe = models.ForeignKey(         # ERD 설계에 맞춰서 필드명 수정
-        ArticleRecipe, on_delete=models.CASCADE, related_name='article_recipe_comment')
+        User, on_delete=models.SET_NULL, null=True, related_name="user_comment"
+    )
+    article_recipe = models.ForeignKey(  # ERD 설계에 맞춰서 필드명 수정
+        ArticleRecipe, on_delete=models.CASCADE, related_name="article_recipe_comment"
+    )
     content = models.CharField(max_length=255)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
