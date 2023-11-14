@@ -317,11 +317,19 @@ class StarRateView(APIView):
         recipe_star_rate.delete()
         return Response("별점이 삭제되었습니다", status=status.HTTP_204_NO_CONTENT)
     
+class RecipeUserBookmarkView(APIView):
+    def get(self, request):
+        """ 요청 유저의 북마크 반환 """
+        if request.user.is_anonymous:
+            return Response("로그인 해주세요.", status=status.HTTP_401_UNAUTHORIZED)
+        else:
+            bookmark = ArticleRecipe.objects.filter(recipe_bookmark__user_id =request.user.id)
+            serializer = RecipeSerializer(bookmark, many=True)
+            return Response(serializer.data, status=status.HTTP_200_OK)
 
 class RecipeBookmarkView(APIView):
-    """요청 유저 아이디로 해당 레시피를 북마크 추가"""
-
     def post(self, request, article_recipe_id):
+        """요청 유저 아이디로 해당 레시피를 북마크 추가"""
         # 로그인 정보 확인
         try:
             user = User.objects.get(id=request.user.id)
