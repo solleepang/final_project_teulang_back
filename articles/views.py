@@ -109,7 +109,20 @@ class RecipeDetailView(APIView):
     def get(self, request, article_recipe_id):
         recipe = get_object_or_404(ArticleRecipe, id=article_recipe_id)
         serializer = RecipeSerializer(recipe)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        if request.user.is_anonymous:
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        else:
+            rate = StarRate.objects.filter(id=article_recipe_id, user_id=request.user.id)
+            user_data = {
+                "request_user_article_data": {
+                    "request_user": request.user.nickname,
+                    "is_bookmarked": True if RecipeBookmark.objects.filter(id=article_recipe_id, user_id=request.user.id) else False,
+                    "is_star_rated": True if rate else False,
+                    "star_rate": rate[0].star_rate if rate else None
+                }
+            }
+            user_data.update(serializer.data)
+            return Response(user_data, status=status.HTTP_200_OK)
 
     # 레시피 수정하기
     def put(self, request, article_recipe_id):
@@ -203,82 +216,82 @@ class RecipeDetailView(APIView):
             return Response("권한이 없습니다", status=status.HTTP_403_FORBIDDEN)
 
 
-class OrderView(APIView):
-    # 각 레시피의 조리 순서 전부 가져오기
-    def get(self, request, article_recipe_id):
-        recipe = ArticleRecipe.objects.get(id=article_recipe_id)
-        recipe_orders = recipe.recipe_order.all()  # order_set -> recipe_order
-        serializer = OrderSerializer(recipe_orders, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+# class OrderView(APIView):
+#     # 각 레시피의 조리 순서 전부 가져오기
+#     def get(self, request, article_recipe_id):
+#         recipe = ArticleRecipe.objects.get(id=article_recipe_id)
+#         recipe_orders = recipe.recipe_order.all()  # order_set -> recipe_order
+#         serializer = OrderSerializer(recipe_orders, many=True)
+#         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
-class OrderDetailView(APIView):
-    # 각 레시피의 조리순서 수정하기 (하나씩 각각)
-    def put(self, request, article_recipe_id, recipe_order_id):
-        recipe = get_object_or_404(ArticleRecipe, id=article_recipe_id)
-        # recipe_order = get_object_or_404(RecipeOrder, id=recipe_order_id) ==> 식재료와 마찬가지로 오류 수정
-        recipe_order = recipe.recipe_order.get(id=recipe_order_id)
-        if request.user == recipe.author:  # 해당 레시피 작성자가 아니면 수정 안되게 설정
-            serializer = OrderCreateSerializer(recipe_order, data=request.data)
-            if serializer.is_valid():
-                serializer.save()
-                return Response(serializer.data, status=status.HTTP_200_OK)
-            else:
-                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        else:
-            return Response("권한이 없습니다", status=status.HTTP_403_FORBIDDEN)
+# class OrderDetailView(APIView):
+#     # 각 레시피의 조리순서 수정하기 (하나씩 각각)
+#     def put(self, request, article_recipe_id, recipe_order_id):
+#         recipe = get_object_or_404(ArticleRecipe, id=article_recipe_id)
+#         # recipe_order = get_object_or_404(RecipeOrder, id=recipe_order_id) ==> 식재료와 마찬가지로 오류 수정
+#         recipe_order = recipe.recipe_order.get(id=recipe_order_id)
+#         if request.user == recipe.author:  # 해당 레시피 작성자가 아니면 수정 안되게 설정
+#             serializer = OrderCreateSerializer(recipe_order, data=request.data)
+#             if serializer.is_valid():
+#                 serializer.save()
+#                 return Response(serializer.data, status=status.HTTP_200_OK)
+#             else:
+#                 return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+#         else:
+#             return Response("권한이 없습니다", status=status.HTTP_403_FORBIDDEN)
 
-    # 각 레시피의 조리순서 삭제하기 (하나씩 각각)
-    def delete(self, request, article_recipe_id, recipe_order_id):
-        recipe = get_object_or_404(ArticleRecipe, id=article_recipe_id)
-        recipe_order = recipe.recipe_order.get(id=recipe_order_id)
-        if request.user == recipe.author:  # 해당 레시피 작성자가 아니면 삭제 안되게 설정
-            recipe_order.delete()
-            return Response("삭제되었습니다", status=status.HTTP_204_NO_CONTENT)
-        else:
-            return Response("권한이 없습니다", status=status.HTTP_403_FORBIDDEN)
-
-
-class IngredientView(APIView):
-    # 각 레시피의 재료 전부 가져오기
-    def get(self, request, article_recipe_id):
-        recipe = ArticleRecipe.objects.get(id=article_recipe_id)
-        recipe_ingredients = recipe.recipe_ingredients.all()
-        serializer = IngredientSerializer(recipe_ingredients, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+#     # 각 레시피의 조리순서 삭제하기 (하나씩 각각)
+#     def delete(self, request, article_recipe_id, recipe_order_id):
+#         recipe = get_object_or_404(ArticleRecipe, id=article_recipe_id)
+#         recipe_order = recipe.recipe_order.get(id=recipe_order_id)
+#         if request.user == recipe.author:  # 해당 레시피 작성자가 아니면 삭제 안되게 설정
+#             recipe_order.delete()
+#             return Response("삭제되었습니다", status=status.HTTP_204_NO_CONTENT)
+#         else:
+#             return Response("권한이 없습니다", status=status.HTTP_403_FORBIDDEN)
 
 
-class IngredientDetailView(APIView):
-    # 각 레시피의 재료 수정하기 (하나씩 각각)
-    def put(self, request, article_recipe_id, article_recipe_ingredients_id):
-        recipe = get_object_or_404(ArticleRecipe, id=article_recipe_id)
-        # url에서 받아온 recipe_id값과 동일한 recipe 내에서 역참조한 식재료 목록 중 ingredients_id와 같은 값을 갖는 식재료 목록을 하나씩 가져옵니다.
-        recipe_ingredients = recipe.recipe_ingredients.get(
-            id=article_recipe_ingredients_id
-        )
-        if request.user == recipe.author:  # 해당 레시피 작성자가 아니면 수정 안되게 설정
-            serializer = IngredientCreateSerializer(
-                recipe_ingredients, data=request.data
-            )
-            if serializer.is_valid():
-                serializer.save()
-                return Response(serializer.data, status=status.HTTP_200_OK)
-            else:
-                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        else:
-            return Response("권한이 없습니다", status=status.HTTP_403_FORBIDDEN)
+# class IngredientView(APIView):
+#     # 각 레시피의 재료 전부 가져오기
+#     def get(self, request, article_recipe_id):
+#         recipe = ArticleRecipe.objects.get(id=article_recipe_id)
+#         recipe_ingredients = recipe.recipe_ingredients.all()
+#         serializer = IngredientSerializer(recipe_ingredients, many=True)
+#         return Response(serializer.data, status=status.HTTP_200_OK)
 
-    # 각 레시피의 재료 삭제하기 (하나씩 각각)
-    def delete(self, request, article_recipe_id, article_recipe_ingredients_id):
-        recipe = get_object_or_404(ArticleRecipe, id=article_recipe_id)
-        recipe_ingredients = recipe.recipe_ingredients.get(
-            id=article_recipe_ingredients_id
-        )
-        if request.user == recipe.author:  # 해당 레시피 작성자가 아니면 삭제 안되게 설정
-            recipe_ingredients.delete()
-            return Response("삭제되었습니다", status=status.HTTP_204_NO_CONTENT)
-        else:
-            return Response("권한이 없습니다", status=status.HTTP_403_FORBIDDEN)
+
+# class IngredientDetailView(APIView):
+#     # 각 레시피의 재료 수정하기 (하나씩 각각)
+#     def put(self, request, article_recipe_id, article_recipe_ingredients_id):
+#         recipe = get_object_or_404(ArticleRecipe, id=article_recipe_id)
+#         # url에서 받아온 recipe_id값과 동일한 recipe 내에서 역참조한 식재료 목록 중 ingredients_id와 같은 값을 갖는 식재료 목록을 하나씩 가져옵니다.
+#         recipe_ingredients = recipe.recipe_ingredients.get(
+#             id=article_recipe_ingredients_id
+#         )
+#         if request.user == recipe.author:  # 해당 레시피 작성자가 아니면 수정 안되게 설정
+#             serializer = IngredientCreateSerializer(
+#                 recipe_ingredients, data=request.data
+#             )
+#             if serializer.is_valid():
+#                 serializer.save()
+#                 return Response(serializer.data, status=status.HTTP_200_OK)
+#             else:
+#                 return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+#         else:
+#             return Response("권한이 없습니다", status=status.HTTP_403_FORBIDDEN)
+
+#     # 각 레시피의 재료 삭제하기 (하나씩 각각)
+#     def delete(self, request, article_recipe_id, article_recipe_ingredients_id):
+#         recipe = get_object_or_404(ArticleRecipe, id=article_recipe_id)
+#         recipe_ingredients = recipe.recipe_ingredients.get(
+#             id=article_recipe_ingredients_id
+#         )
+#         if request.user == recipe.author:  # 해당 레시피 작성자가 아니면 삭제 안되게 설정
+#             recipe_ingredients.delete()
+#             return Response("삭제되었습니다", status=status.HTTP_204_NO_CONTENT)
+#         else:
+#             return Response("권한이 없습니다", status=status.HTTP_403_FORBIDDEN)
 
 
 class StarRateView(APIView):
@@ -311,12 +324,25 @@ class StarRateView(APIView):
         else:
             # 별점 중복 확인
             return Response("이미 작성한 별점이 있습니다.", status=status.HTTP_409_CONFLICT)
-
+    
+    def delete(self, request, article_recipe_id):
+        recipe_star_rate = get_object_or_404(StarRate, id=article_recipe_id, user_id=request.user.id)
+        recipe_star_rate.delete()
+        return Response("별점이 삭제되었습니다", status=status.HTTP_204_NO_CONTENT)
+    
+class RecipeUserBookmarkView(APIView):
+    def get(self, request):
+        """ 요청 유저의 북마크 반환 """
+        if request.user.is_anonymous:
+            return Response("로그인 해주세요.", status=status.HTTP_401_UNAUTHORIZED)
+        else:
+            bookmark = ArticleRecipe.objects.filter(recipe_bookmark__user_id =request.user.id)
+            serializer = RecipeSerializer(bookmark, many=True)
+            return Response(serializer.data, status=status.HTTP_200_OK)
 
 class RecipeBookmarkView(APIView):
-    """요청 유저 아이디로 해당 레시피를 북마크 추가"""
-
     def post(self, request, article_recipe_id):
+        """요청 유저 아이디로 해당 레시피를 북마크 추가"""
         # 로그인 정보 확인
         try:
             user = User.objects.get(id=request.user.id)
