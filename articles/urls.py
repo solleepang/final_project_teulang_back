@@ -8,26 +8,26 @@ urlpatterns = [
         views.RecipeDetailView.as_view(),
         name="recipe_detail_view",
     ),
-    path(
-        "recipe/<int:article_recipe_id>/order/",
-        views.OrderView.as_view(),
-        name="order_view",
-    ),
-    path(
-        "recipe/<int:article_recipe_id>/order/<int:recipe_order_id>/",
-        views.OrderDetailView.as_view(),
-        name="order_detail_view",
-    ),
-    path(
-        "recipe/<int:article_recipe_id>/ingredients/",
-        views.IngredientView.as_view(),
-        name="order_view",
-    ),
-    path(
-        "recipe/<int:article_recipe_id>/ingredients/<int:article_recipe_ingredients_id>/",
-        views.IngredientDetailView.as_view(),
-        name="order_detail_view",
-    ),
+    # path(
+    #     "recipe/<int:article_recipe_id>/order/",
+    #     views.OrderView.as_view(),
+    #     name="order_view",
+    # ),
+    # path(
+    #     "recipe/<int:article_recipe_id>/order/<int:recipe_order_id>/",
+    #     views.OrderDetailView.as_view(),
+    #     name="order_detail_view",
+    # ),
+    # path(
+    #     "recipe/<int:article_recipe_id>/ingredients/",
+    #     views.IngredientView.as_view(),
+    #     name="order_view",
+    # ),
+    # path(
+    #     "recipe/<int:article_recipe_id>/ingredients/<int:article_recipe_ingredients_id>/",
+    #     views.IngredientDetailView.as_view(),
+    #     name="order_detail_view",
+    # ),
     path(
         "recipe/<int:article_recipe_id>/star_rate/",
         views.StarRateView.as_view(),
