@@ -311,7 +311,12 @@ class StarRateView(APIView):
         else:
             # 별점 중복 확인
             return Response("이미 작성한 별점이 있습니다.", status=status.HTTP_409_CONFLICT)
-
+    
+    def delete(self, request, article_recipe_id):
+        recipe_star_rate = get_object_or_404(StarRate, id=article_recipe_id, user_id=request.user.id)
+        recipe_star_rate.delete()
+        return Response("별점이 삭제되었습니다", status=status.HTTP_204_NO_CONTENT)
+    
 
 class RecipeBookmarkView(APIView):
     """요청 유저 아이디로 해당 레시피를 북마크 추가"""
