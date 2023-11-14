@@ -109,7 +109,20 @@ class RecipeDetailView(APIView):
     def get(self, request, article_recipe_id):
         recipe = get_object_or_404(ArticleRecipe, id=article_recipe_id)
         serializer = RecipeSerializer(recipe)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        if request.user.is_anonymous:
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        else:
+            rate = StarRate.objects.filter(id=article_recipe_id, user_id=request.user.id)
+            user_data = {
+                "request_user_article_data": {
+                    "request_user": request.user.nickname,
+                    "is_bookmarked": True if RecipeBookmark.objects.filter(id=article_recipe_id, user_id=request.user.id) else False,
+                    "is_star_rated": True if rate else False,
+                    "star_rate": rate[0].star_rate if rate else None
+                }
+            }
+            user_data.update(serializer.data)
+            return Response(user_data, status=status.HTTP_200_OK)
 
     # 레시피 수정하기
     def put(self, request, article_recipe_id):
