@@ -4,6 +4,8 @@ from rest_framework.generics import get_object_or_404
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
 from articles.models import (
     ArticleRecipe,
     RecipeOrder,
@@ -524,7 +526,14 @@ class RecipeSearchView(APIView):
         )
 
 
+@api_view(["GET"])  # 데코레이터 추가
+@permission_classes([IsAuthenticated])  # 권한 설정 데코레이터 추가
 def fetch_and_save_openapi_data(request, start, end):
+    if not request.user.is_admin:  # 권한 설정 추가
+        return Response(
+            "권한이 없습니다.", status=status.HTTP_403_FORBIDDEN
+        )  # 권한 설정 추가 (관리자로 로그인한 access token값으로 확인합니다.)
+
     # api키 받기
     api_key = env("API_KEY")
 
