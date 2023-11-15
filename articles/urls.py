@@ -8,26 +8,26 @@ urlpatterns = [
         views.RecipeDetailView.as_view(),
         name="recipe_detail_view",
     ),
-    path(
-        "recipe/<int:article_recipe_id>/order/",
-        views.OrderView.as_view(),
-        name="order_view",
-    ),
-    path(
-        "recipe/<int:article_recipe_id>/order/<int:recipe_order_id>/",
-        views.OrderDetailView.as_view(),
-        name="order_detail_view",
-    ),
-    path(
-        "recipe/<int:article_recipe_id>/ingredients/",
-        views.IngredientView.as_view(),
-        name="order_view",
-    ),
-    path(
-        "recipe/<int:article_recipe_id>/ingredients/<int:article_recipe_ingredients_id>/",
-        views.IngredientDetailView.as_view(),
-        name="order_detail_view",
-    ),
+    # path(
+    #     "recipe/<int:article_recipe_id>/order/",
+    #     views.OrderView.as_view(),
+    #     name="order_view",
+    # ),
+    # path(
+    #     "recipe/<int:article_recipe_id>/order/<int:recipe_order_id>/",
+    #     views.OrderDetailView.as_view(),
+    #     name="order_detail_view",
+    # ),
+    # path(
+    #     "recipe/<int:article_recipe_id>/ingredients/",
+    #     views.IngredientView.as_view(),
+    #     name="order_view",
+    # ),
+    # path(
+    #     "recipe/<int:article_recipe_id>/ingredients/<int:article_recipe_ingredients_id>/",
+    #     views.IngredientDetailView.as_view(),
+    #     name="order_detail_view",
+    # ),
     path(
         "recipe/<int:article_recipe_id>/star_rate/",
         views.StarRateView.as_view(),
@@ -49,8 +49,13 @@ urlpatterns = [
         name="recipe_search_view",
     ),
     path(
-        "fetch-and-save-data/",
+        "fetch-and-save-data/<int:start>/<int:end>/",
         views.fetch_and_save_openapi_data,
         name="fetch_and_save_openapi_data",
+    ),
+    path(
+        "recipe/bookmark/",
+        views.RecipeUserBookmarkView.as_view(),
+        name="user_bookmark_view",
     ),
 ]

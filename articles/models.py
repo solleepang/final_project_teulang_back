@@ -59,7 +59,7 @@ class ArticleRecipeIngredients(models.Model):
 
 
 class StarRate(models.Model):
-    star_rate = models.IntegerField(null=True, blank=True)
+    star_rate = models.IntegerField()
     user_id = models.ForeignKey(
         User, on_delete=models.SET_NULL, null=True, related_name="recipe_star_rate"
     )
