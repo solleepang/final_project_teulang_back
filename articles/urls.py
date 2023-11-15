@@ -49,11 +49,13 @@ urlpatterns = [
         name="recipe_search_view",
     ),
     path(
-        "fetch-and-save-data/",
+        "fetch-and-save-data/<int:start>/<int:end>/",
         views.fetch_and_save_openapi_data,
         name="fetch_and_save_openapi_data",
     ),
     path(
-        "recipe/bookmark/", views.RecipeUserBookmarkView.as_view(), name="user_bookmark_view",
+        "recipe/bookmark/",
+        views.RecipeUserBookmarkView.as_view(),
+        name="user_bookmark_view",
     ),
 ]
