@@ -50,9 +50,16 @@ class IngredientCreateSerializer(serializers.ModelSerializer):
 
 
 class StarRateSerializer(serializers.ModelSerializer):
+    star_avg = serializers.SerializerMethodField()
     class Meta:
         model = StarRate
         fields = "__all__"
+
+    def get_star_avg(self, obj):
+        """ 해당 게시글 별점 평균 """
+        star_rate = StarRate.objects.filter(
+            article_recipe_id=obj.id).aggregate(Avg('star_rate'))
+        return star_rate['star_rate__avg']
 
 
 class RecipeBookmarkSerializer(serializers.ModelSerializer):
@@ -112,9 +119,9 @@ class RecipeSerializer(serializers.ModelSerializer):
 
     def get_star_avg(self, obj):
         """ 해당 게시글 별점 평균 """
-        star_rate2 = StarRate.objects.filter(
+        star_rate = StarRate.objects.filter(
             article_recipe_id=obj.id).aggregate(Avg('star_rate'))
-        return star_rate2['star_rate__avg']
+        return star_rate['star_rate__avg']
 
     def get_bookmark_count(self, obj):
         """ 해당 게시글을 북마크한 사람의 수 """
