@@ -1,6 +1,6 @@
 # 털랭
 <p align="center">
-<img src=![logo](https://github.com/solleepang/final_project_teulang_back/assets/144214007/eb0be101-81ba-43b5-bcea-3a2c41ddc67e)>
+<img src="![logo](https://github.com/solleepang/final_project_teulang_back/assets/144214007/eb0be101-81ba-43b5-bcea-3a2c41ddc67e)">
 </p>
 
 
