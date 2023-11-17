@@ -1,5 +1,7 @@
 # 털랭
-![logo](https://github.com/solleepang/final_project_teulang_back/assets/144214007/eb0be101-81ba-43b5-bcea-3a2c41ddc67e)
+<p align="center">
+<img src=![logo](https://github.com/solleepang/final_project_teulang_back/assets/144214007/eb0be101-81ba-43b5-bcea-3a2c41ddc67e)>
+</p>
 
 
 ## 프로젝트 정보
@@ -17,7 +19,7 @@
 
 
 ## 팀 소개
-(역할, 이름, 맡은 기능/파트, 깃허브 주소)
+(역할, 이름, 맡은 기능/파트, 개인 깃허브 주소)
 
 - BE,AWS 김민재: 레시피 댓글 CRUD, EC2 배포, 프론트엔드 배포
 - FE 김현우: 회원가입, 로그인, 이메일/닉네임 중복확인
