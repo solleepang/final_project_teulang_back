@@ -122,17 +122,11 @@ class RecipeDetailView(APIView):
         if request.user.is_anonymous:
             return Response(serializer.data, status=status.HTTP_200_OK)
         else:
-            rate = StarRate.objects.filter(
-                id=article_recipe_id, user_id=request.user.id
-            )
+            rate = StarRate.objects.filter(article_recipe_id=article_recipe_id, user_id=request.user.id)
             user_data = {
                 "request_user_article_data": {
                     "request_user": request.user.nickname,
-                    "is_bookmarked": True
-                    if RecipeBookmark.objects.filter(
-                        id=article_recipe_id, user_id=request.user.id
-                    )
-                    else False,
+                    "is_bookmarked": True if RecipeBookmark.objects.filter(article_recipe_id=article_recipe_id, user_id=request.user.id) else False,
                     "is_star_rated": True if rate else False,
                     "star_rate": rate[0].star_rate if rate else None,
                 }
@@ -362,7 +356,7 @@ class StarRateView(APIView):
             serializer = StarRateSerializer(data=request.data)
             if serializer.is_valid():
                 serializer.save(user_id=user, article_recipe_id=recipe)
-                return Response("별점이 추가되었습니다.", status=status.HTTP_201_CREATED)
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
             else:
                 return Response("잘못된 요청입니다.", status=status.HTTP_400_BAD_REQUEST)
         else:
@@ -490,7 +484,6 @@ class RecipeSearchView(APIView):
         ingredients = quart_string.split(",")
         recipes = []
         for i in range(len(ingredients)):
-            print(i)
             if i < 1:
                 recipes = ArticleRecipe.objects.filter(
                     recipe_ingredients__ingredients__contains=ingredients[i].strip()
@@ -521,9 +514,9 @@ class RecipeSearchView(APIView):
             "pages_num": recipes_paginator.num_pages,  # 총 페이지 수
         }
         serializer = RecipeSerializer(page_obj, many=True)
+        
         return Response(
-            serializer.data, status=status.HTTP_200_OK, headers=paginator_data
-        )
+            {"pagenation_data":paginator_data, "serializer_data":serializer.data}, status=status.HTTP_200_OK)
 
 
 @api_view(["GET"])  # 데코레이터 추가
