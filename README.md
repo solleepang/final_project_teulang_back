@@ -67,5 +67,9 @@ https://splashy-profit-9d6.notion.site/2348824ac44846ebadb7feb019630974?v=d885ce
 #### 👥 사용자 팔로우, 회원가입 시 이메일 인증 등
 
 ## 서비스 아키텍쳐
+<p align="center">
+<img src="https://github.com/solleepang/final_project_teulang_back/assets/144214007/aef04d6b-b926-4797-bf3d-87bcc4f15659">
+</p>
+
 
 ## 기타 추가 사항 
