@@ -154,7 +154,7 @@ class BookmarkRecipeSerializer(serializers.ModelSerializer):
     class Meta:
         model = ArticleRecipe
         # fields = "__all__"
-        fields = ['author','title','description','recipe_thumbnail']
+        fields = ['author','title','description','recipe_thumbnail','recipe_thumbnail_api','api_recipe']
 
 
 class RecipeBookmarkSerializer(serializers.ModelSerializer):
