@@ -65,7 +65,7 @@ https://teulang.notion.site/2348824ac44846ebadb7feb019630974?v=d885ceee2f274226a
 
 ## 서비스 아키텍쳐
 <p align="center">
-<img src="https://github.com/solleepang/final_project_teulang_back/assets/144214007/aa6e6206-c017-4559-a3b1-6eaff277972e">
+<img src="https://github.com/solleepang/final_project_teulang_back/assets/144214007/114bd6dd-c6c7-4086-90b0-d684e51d1585">
 </p>
 
 
