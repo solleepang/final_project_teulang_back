@@ -93,3 +93,32 @@ class CommentArticlesRecipe(models.Model):
     content = models.CharField(max_length=255)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+
+class ArticlesFree(models.Model):
+    FREE_ARTICLE_CATEGORY = [
+        ('review', 'Review'),
+        ('chat', 'Chat')
+    ]
+    author_id = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name="articles_free")
+    title = models.CharField(max_length=50)
+    content = models.TextField(null=True, blank=True)
+    category = models.CharField(max_length=25, choices=FREE_ARTICLE_CATEGORY, default='chat')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return str(self.title)
+    
+
+class ArticleFreeImages(models.Model):
+    article_free_id = models.ForeignKey(ArticlesFree, on_delete=models.CASCADE, related_name="article_free_image", null=True)
+    free_image = models.ImageField(blank=True, upload_to="article/free_image")
+
+
+class CommentArticlesFree(models.Model):
+    author_id = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name="user_comment_free")
+    article_free_id = models.ForeignKey(ArticlesFree, on_delete=models.CASCADE, related_name="article_free_comment", null=True)
+    content = models.CharField(max_length=255)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
