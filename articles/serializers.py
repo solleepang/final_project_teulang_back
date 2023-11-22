@@ -7,6 +7,9 @@ from articles.models import (
     StarRate,
     RecipeBookmark,
     CommentArticlesRecipe,
+    ArticlesFree,
+    ArticleFreeImages,
+    CommentArticlesFree,
 )
 from users.serializers import UserDataSerializer
 from users.models import User
@@ -128,3 +131,57 @@ class RecipeSerializer(serializers.ModelSerializer):
         bookmark = RecipeBookmark.objects.filter(
             article_recipe_id=obj.id).count()
         return bookmark
+
+
+class FreeCommentSerializer(serializers.ModelSerializer):
+    comment_user_data = serializers.SerializerMethodField()
+    class Meta:
+        model = CommentArticlesFree
+        fields = "__all__"
+
+    def get_comment_user_data(self, obj):
+        """ 해당 댓글 작성한 유저 데이터(이메일, 프로필, 닉네임, 팔로우)"""
+        if obj.author_id:
+            user = User.objects.get(id=obj.author_id.id)
+            info = UserDataSerializer(user)
+            return info.data
+        else:
+            return "탈퇴한 회원"
+
+class FreeImagesSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ArticleFreeImages
+        fields = "__all__"
+
+class FreeArticleSerializer(serializers.ModelSerializer):
+    article_user_data = serializers.SerializerMethodField()
+    images = serializers.SerializerMethodField()
+    article_free_comment = FreeCommentSerializer(many=True, read_only=True)
+    class Meta:
+        model = ArticlesFree
+        fields = "__all__"
+
+    def create(self, validated_data):
+        free_article = ArticlesFree.objects.create(**validated_data)
+        images = self.context['request'].FILES
+        for image in images.getlist('image'):
+            ArticleFreeImages.objects.create(article_free_id=free_article, free_image=image)
+        return free_article
+    
+    def get_article_user_data(self, obj):
+        """ 해당 댓글 작성한 유저 데이터(이메일, 프로필, 닉네임, 팔로우)"""
+        if obj.author_id:
+            user = User.objects.get(id=obj.author_id.id)
+            info = UserDataSerializer(user)
+            return info.data
+        else:
+            return "탈퇴한 회원"
+        
+    def get_images(self, obj):
+        images = ArticleFreeImages.objects.filter(article_free_id=obj)
+        if images:
+            return FreeImagesSerializer(images, many=True).data
+        else:
+            return        
+    
+        
