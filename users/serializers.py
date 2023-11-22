@@ -52,10 +52,8 @@ class ResetPasswordSerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
         """비밀번호 재설정을 위한 메서드입니다."""
-        password = validated_data.pop("new_password", None)
 
-        # 비밀번호 유효성 검사
-        password = validate_password(password)
+        password = validated_data.pop("new_password")
 
         user = super().update(instance, validated_data)
         if password:
