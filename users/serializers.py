@@ -156,6 +156,20 @@ class BookmarkRecipeSerializer(serializers.ModelSerializer):
         # fields = "__all__"
         fields = ['author','title','description','recipe_thumbnail','recipe_thumbnail_api','api_recipe']
 
+# 팔로잉 한 유저의 정보를 알기 위한 클래스입니다.
+class FollowerSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['id', 'nickname']
+
+# 팔로우 한 유저의 정보를 알기 위한 클래스입니다.
+class FollowingSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['id', 'nickname']
+
+
+
 
 class RecipeBookmarkSerializer(serializers.ModelSerializer):
     article_recipe = BookmarkRecipeSerializer(source='article_recipe_id',read_only=True) # 레시피에 대한 정보 받기
@@ -174,12 +188,14 @@ class UserInfoSerializer(serializers.ModelSerializer):
     articles_recipe = ArticleRecipeSerializer(many=True, read_only=True)
     bookmarked_articles = RecipeBookmarkSerializer(
         many=True, read_only=True, source='recipe_bookmark')
+    followers = FollowerSerializer(many=True, read_only=True)
+    following = FollowingSerializer(many=True, read_only=True)
 
     """회원 정보 확인"""
     class Meta:
         model = User
         fields = ("email", "user_img", "articles_recipe",
-                  "nickname", "following", "bookmarked_articles")
+                  "nickname", "following", "bookmarked_articles","followers","is_admin")
         # fields = "__all__"
 
 
