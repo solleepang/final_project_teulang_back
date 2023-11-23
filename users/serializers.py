@@ -193,7 +193,7 @@ class UserInfoSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ("email", "user_img", "articles_recipe",
-                  "nickname", "following", "bookmarked_articles","followers","is_admin")
+                  "nickname", "following", "bookmarked_articles","followers","is_admin","is_email_verified")
         # fields = "__all__"
 
 
