@@ -58,4 +58,9 @@ urlpatterns = [
         views.RecipeUserBookmarkView.as_view(),
         name="user_bookmark_view",
     ),
+    path(
+        "detect_objects/",
+        views.DetectObjectsAPI.as_view(),
+        name="detect_objects_api",
+    ),
 ]

@@ -30,6 +30,13 @@ from teulang.settings import env
 from django.core.paginator import Paginator
 from django.db.models import Count
 
+from ultralytics import YOLO
+import cv2 as cv
+import tempfile
+import os
+from django.conf import settings
+from datetime import datetime
+
 
 class RecipeView(APIView):
     # 레시피 불러오기(전체, 정렬(인기순/최신순))
@@ -122,11 +129,17 @@ class RecipeDetailView(APIView):
         if request.user.is_anonymous:
             return Response(serializer.data, status=status.HTTP_200_OK)
         else:
-            rate = StarRate.objects.filter(article_recipe_id=article_recipe_id, user_id=request.user.id)
+            rate = StarRate.objects.filter(
+                article_recipe_id=article_recipe_id, user_id=request.user.id
+            )
             user_data = {
                 "request_user_article_data": {
                     "request_user": request.user.nickname,
-                    "is_bookmarked": True if RecipeBookmark.objects.filter(article_recipe_id=article_recipe_id, user_id=request.user.id) else False,
+                    "is_bookmarked": True
+                    if RecipeBookmark.objects.filter(
+                        article_recipe_id=article_recipe_id, user_id=request.user.id
+                    )
+                    else False,
                     "is_star_rated": True if rate else False,
                     "star_rate": rate[0].star_rate if rate else None,
                 }
@@ -514,9 +527,11 @@ class RecipeSearchView(APIView):
             "pages_num": recipes_paginator.num_pages,  # 총 페이지 수
         }
         serializer = RecipeSerializer(page_obj, many=True)
-        
+
         return Response(
-            {"pagenation_data":paginator_data, "serializer_data":serializer.data}, status=status.HTTP_200_OK)
+            {"pagenation_data": paginator_data, "serializer_data": serializer.data},
+            status=status.HTTP_200_OK,
+        )
 
 
 @api_view(["GET"])  # 데코레이터 추가
@@ -573,3 +588,99 @@ def fetch_and_save_openapi_data(request, start, end):
         return JsonResponse({"message": "데이터 가져오기 및 저장 완료"})
     else:
         return JsonResponse({"error": "데이터 가져오기 실패"}, status=500)
+
+
+# class DetectObjectsAPI(APIView):
+#     def post(self, request, *args, **kwargs):
+#         # YOLO 모델 불러오기
+#         model = YOLO("best.pt")
+
+#         # POST 요청으로부터 이미지 파일 얻기
+#         image = request.FILES.get("image")
+
+#         # 입력 이미지를 임시 파일로 저장
+#         input_image_path = os.path.join(settings.MEDIA_ROOT, "temp_input_image.jpg")
+#         with open(input_image_path, "wb") as destination:
+#             for chunk in image.chunks():
+#                 destination.write(chunk)
+
+#         # YOLO 모델을 사용하여 객체 감지 수행
+#         results = model.predict(source=input_image_path, device="cpu")[0]
+
+#         # 클래스 이름 얻기
+#         class_names = results.names
+
+#         # 중복 제거된 감지된 클래스 얻기
+#         detected_classes_set = set([class_names[int(r)] for r in results.boxes.cls])
+#         detected_classes = list(detected_classes_set)
+
+#         # 출력 이미지를 저장할 디렉토리 생성
+#         output_directory = os.path.join(settings.MEDIA_ROOT, "detected_images")
+#         os.makedirs(output_directory, exist_ok=True)
+
+#         # 출력 이미지의 랜덤 파일명 생성
+#         output_image_path = os.path.join(
+#             output_directory, f"output_{hash(input_image_path)}.png"
+#         )
+
+#         # 경계 상자와 주석이 추가된 이미지를 그려서 저장
+#         result_plotted = results.plot(line_width=1)
+#         cv.imwrite(output_image_path, result_plotted)
+
+#         # 임시 입력 이미지 파일 삭제
+#         os.remove(input_image_path)
+
+#         # Response 데이터 구성
+#         response_data = {
+#             "detected_classes": detected_classes,
+#             "output_image_path": output_image_path,
+#         }
+
+#         return Response(response_data)
+
+
+class DetectObjectsAPI(APIView):
+    def post(self, request):
+        # YOLO 모델 불러오기
+        model = YOLO("best.pt")
+
+        # POST 요청으로부터 이미지 파일 얻기
+        image = request.FILES.get("image")
+
+        # 이미지를 임시 파일로 저장
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".jpg") as temp_image:
+            temp_image.write(image.read())
+            temp_image_path = temp_image.name
+
+        # YOLO 모델을 사용하여 객체 감지 수행
+        results = model.predict(source=temp_image_path, device="cpu")[0]
+
+        # 클래스 이름 얻기
+        class_names = results.names
+
+        # 중복 제거된 감지된 클래스 얻기
+        detected_classes_set = set([class_names[int(r)] for r in results.boxes.cls])
+        detected_classes = list(detected_classes_set)
+
+        # 출력 이미지를 저장할 디렉토리 생성
+        output_directory = os.path.join(settings.MEDIA_ROOT, "detected_images")
+        os.makedirs(output_directory, exist_ok=True)
+
+        # 현재 시간을 이용하여 파일명 생성
+        current_time = datetime.now().strftime("%Y%m%d%H%M%S")
+        output_image_path = os.path.join(output_directory, f"output_{current_time}.png")
+
+        # 경계 상자와 주석이 추가된 이미지를 그려서 저장
+        result_plotted = results.plot(line_width=1)
+        cv.imwrite(output_image_path, result_plotted)
+
+        # 임시 이미지 파일 삭제
+        os.remove(temp_image_path)
+
+        # Response 데이터 구성
+        response_data = {
+            "detected_classes": detected_classes,
+            "output_image_path": output_image_path,
+        }
+
+        return Response(response_data, status=status.HTTP_200_OK)
