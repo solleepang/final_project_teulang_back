@@ -58,9 +58,29 @@ urlpatterns = [
         views.RecipeUserBookmarkView.as_view(),
         name="user_bookmark_view",
     ),
-    path("free/", views.ArticleFreeView.as_view(), name="free_view",),
-    path("free/<int:article_free_id>/", views.ArticleFreeDetailView.as_view(), name="free_detail_view",
+    path(
+        "free/",
+        views.ArticleFreeView.as_view(),
+        name="free_view",
     ),
-    path("free/<int:article_free_id>/comment/", views.CommentFreeView.as_view(), name="free_comment_view",),
-    path("free/<int:article_free_id>/comment/<int:free_comment_id>/", views.CommentFreeView.as_view(), name="free_comment_view",),
+    path(
+        "free/<int:article_free_id>/",
+        views.ArticleFreeDetailView.as_view(),
+        name="free_detail_view",
+    ),
+    path(
+        "free/<int:article_free_id>/comment/",
+        views.CommentFreeView.as_view(),
+        name="free_comment_view",
+    ),
+    path(
+        "free/<int:article_free_id>/comment/<int:free_comment_id>/",
+        views.CommentFreeView.as_view(),
+        name="free_comment_view",
+    ),
+    path(
+        "detect_objects/",
+        views.DetectObjectsAPI.as_view(),
+        name="detect_objects_api",
+    ),
 ]

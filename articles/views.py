@@ -36,6 +36,13 @@ from teulang.settings import env
 from django.core.paginator import Paginator
 from django.db.models import Count
 
+from ultralytics import YOLO
+import cv2 as cv
+import tempfile
+import os
+from django.conf import settings
+from datetime import datetime
+
 
 class RecipeView(APIView):
     # 레시피 불러오기(전체, 정렬(인기순/최신순))
@@ -128,11 +135,17 @@ class RecipeDetailView(APIView):
         if request.user.is_anonymous:
             return Response(serializer.data, status=status.HTTP_200_OK)
         else:
-            rate = StarRate.objects.filter(article_recipe_id=article_recipe_id, user_id=request.user.id)
+            rate = StarRate.objects.filter(
+                article_recipe_id=article_recipe_id, user_id=request.user.id
+            )
             user_data = {
                 "request_user_article_data": {
                     "request_user": request.user.nickname,
-                    "is_bookmarked": True if RecipeBookmark.objects.filter(article_recipe_id=article_recipe_id, user_id=request.user.id) else False,
+                    "is_bookmarked": True
+                    if RecipeBookmark.objects.filter(
+                        article_recipe_id=article_recipe_id, user_id=request.user.id
+                    )
+                    else False,
                     "is_star_rated": True if rate else False,
                     "star_rate": rate[0].star_rate if rate else None,
                 }
@@ -520,9 +533,11 @@ class RecipeSearchView(APIView):
             "pages_num": recipes_paginator.num_pages,  # 총 페이지 수
         }
         serializer = RecipeSerializer(page_obj, many=True)
-        
+
         return Response(
-            {"pagenation_data":paginator_data, "serializer_data":serializer.data}, status=status.HTTP_200_OK)
+            {"pagenation_data": paginator_data, "serializer_data": serializer.data},
+            status=status.HTTP_200_OK,
+        )
 
 
 @api_view(["GET"])  # 데코레이터 추가
@@ -581,9 +596,105 @@ def fetch_and_save_openapi_data(request, start, end):
         return JsonResponse({"error": "데이터 가져오기 실패"}, status=500)
 
 
+# class DetectObjectsAPI(APIView):
+#     def post(self, request, *args, **kwargs):
+#         # YOLO 모델 불러오기
+#         model = YOLO("best.pt")
+
+#         # POST 요청으로부터 이미지 파일 얻기
+#         image = request.FILES.get("image")
+
+#         # 입력 이미지를 임시 파일로 저장
+#         input_image_path = os.path.join(settings.MEDIA_ROOT, "temp_input_image.jpg")
+#         with open(input_image_path, "wb") as destination:
+#             for chunk in image.chunks():
+#                 destination.write(chunk)
+
+#         # YOLO 모델을 사용하여 객체 감지 수행
+#         results = model.predict(source=input_image_path, device="cpu")[0]
+
+#         # 클래스 이름 얻기
+#         class_names = results.names
+
+#         # 중복 제거된 감지된 클래스 얻기
+#         detected_classes_set = set([class_names[int(r)] for r in results.boxes.cls])
+#         detected_classes = list(detected_classes_set)
+
+#         # 출력 이미지를 저장할 디렉토리 생성
+#         output_directory = os.path.join(settings.MEDIA_ROOT, "detected_images")
+#         os.makedirs(output_directory, exist_ok=True)
+
+#         # 출력 이미지의 랜덤 파일명 생성
+#         output_image_path = os.path.join(
+#             output_directory, f"output_{hash(input_image_path)}.png"
+#         )
+
+#         # 경계 상자와 주석이 추가된 이미지를 그려서 저장
+#         result_plotted = results.plot(line_width=1)
+#         cv.imwrite(output_image_path, result_plotted)
+
+#         # 임시 입력 이미지 파일 삭제
+#         os.remove(input_image_path)
+
+#         # Response 데이터 구성
+#         response_data = {
+#             "detected_classes": detected_classes,
+#             "output_image_path": output_image_path,
+#         }
+
+#         return Response(response_data)
+
+
+class DetectObjectsAPI(APIView):
+    def post(self, request):
+        # YOLO 모델 불러오기
+        model = YOLO("best.pt")
+
+        # POST 요청으로부터 이미지 파일 얻기
+        image = request.FILES.get("image")
+
+        # 이미지를 임시 파일로 저장
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".jpg") as temp_image:
+            temp_image.write(image.read())
+            temp_image_path = temp_image.name
+
+        # YOLO 모델을 사용하여 객체 감지 수행
+        results = model.predict(source=temp_image_path, device="cpu")[0]
+
+        # 클래스 이름 얻기
+        class_names = results.names
+
+        # 중복 제거된 감지된 클래스 얻기
+        detected_classes_set = set([class_names[int(r)] for r in results.boxes.cls])
+        detected_classes = list(detected_classes_set)
+
+        # 출력 이미지를 저장할 디렉토리 생성
+        output_directory = os.path.join(settings.MEDIA_ROOT, "detected_images")
+        os.makedirs(output_directory, exist_ok=True)
+
+        # 현재 시간을 이용하여 파일명 생성
+        current_time = datetime.now().strftime("%Y%m%d%H%M%S")
+        output_image_path = os.path.join(output_directory, f"output_{current_time}.png")
+
+        # 경계 상자와 주석이 추가된 이미지를 그려서 저장
+        result_plotted = results.plot(line_width=1)
+        cv.imwrite(output_image_path, result_plotted)
+
+        # 임시 이미지 파일 삭제
+        os.remove(temp_image_path)
+
+        # Response 데이터 구성
+        response_data = {
+            "detected_classes": detected_classes,
+            "output_image_path": output_image_path,
+        }
+
+        return Response(response_data, status=status.HTTP_200_OK)
+
+
 class ArticleFreeView(APIView):
     def get(self, request):
-        """ 자유게시판 전체 게시글+이미지+댓글 조회 """
+        """자유게시판 전체 게시글+이미지+댓글 조회"""
         page = request.GET.get("page", 1) if request.GET.get("page", 1) else 1
         free_article = ArticlesFree.objects.all()
         all_free_paginator = Paginator(free_article, 20)
@@ -595,16 +706,25 @@ class ArticleFreeView(APIView):
             return Response("요청한 페이지가 없습니다.", status=status.HTTP_404_NOT_FOUND)
         page_obj = all_free_paginator.page(page)
         serializer = FreeArticleSerializer(page_obj, many=True)
-        return Response({"pagenation_data":paginator_data, "serializer_data":serializer.data}, status=status.HTTP_200_OK)
-    
+        return Response(
+            {"pagenation_data": paginator_data, "serializer_data": serializer.data},
+            status=status.HTTP_200_OK,
+        )
+
     def post(self, request):
-        """ 자유게시판 게시글 작성 """
+        """자유게시판 게시글 작성"""
         if not request.user.is_authenticated:
-            return Response({"message": "로그인이 필요합니다."}, status=status.HTTP_401_UNAUTHORIZED)
+            return Response(
+                {"message": "로그인이 필요합니다."}, status=status.HTTP_401_UNAUTHORIZED
+            )
         if not request.user.is_email_verified:
-            return Response({"message": "이메일 인증이 필요합니다."}, status=status.HTTP_403_FORBIDDEN)
-        
-        serializer = FreeArticleSerializer(data=request.data, context={'request': request})
+            return Response(
+                {"message": "이메일 인증이 필요합니다."}, status=status.HTTP_403_FORBIDDEN
+            )
+
+        serializer = FreeArticleSerializer(
+            data=request.data, context={"request": request}
+        )
         if serializer.is_valid():
             serializer.save(author_id=request.user)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -614,29 +734,35 @@ class ArticleFreeView(APIView):
 
 class ArticleFreeDetailView(APIView):
     def get(self, request, article_free_id):
-        """ 자유게시판 특정 게시글+이미지+댓글 조회 """
+        """자유게시판 특정 게시글+이미지+댓글 조회"""
         free_article = get_object_or_404(ArticlesFree, id=article_free_id)
         serializer = FreeArticleSerializer(free_article)
         return Response(serializer.data, status=status.HTTP_200_OK)
-    
+
     def put(self, request, article_free_id):
-        """ 자유게시판 특정 게시글+이미지 수정 """
+        """자유게시판 특정 게시글+이미지 수정"""
         if not request.user.is_authenticated:
             return Response("로그인 정보가 없습니다", status=status.HTTP_401_UNAUTHORIZED)
-        
+
         free_article = get_object_or_404(ArticlesFree, id=article_free_id)
         if request.user == free_article.author_id:
             # 게시글 수정
-            free_article_serializer = FreeArticleSerializer(free_article, data=request.data)
+            free_article_serializer = FreeArticleSerializer(
+                free_article, data=request.data
+            )
             if free_article_serializer.is_valid():
                 free_article_serializer.save()
             else:
-                return Response(free_article_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+                return Response(
+                    free_article_serializer.errors, status=status.HTTP_400_BAD_REQUEST
+                )
             # 이미지 추가
             new_images = request.FILES
             if new_images:
-                for image in new_images.getlist('image'):
-                    ArticleFreeImages.objects.create(article_free_id=free_article, free_image=image)
+                for image in new_images.getlist("image"):
+                    ArticleFreeImages.objects.create(
+                        article_free_id=free_article, free_image=image
+                    )
             # 이미지 삭제
             delete_images = request.data.get("delete_image")
             error_text = []
@@ -645,21 +771,31 @@ class ArticleFreeDetailView(APIView):
                 delete_images = eval(delete_images)
                 for delete_image in delete_images:
                     try:
-                        delete_image_id = ArticleFreeImages.objects.get(id=delete_image, article_free_id=free_article)
+                        delete_image_id = ArticleFreeImages.objects.get(
+                            id=delete_image, article_free_id=free_article
+                        )
                     except ObjectDoesNotExist:
-                        error_text.append(f'delete_image_error: db에서 [id:{delete_image}] 이미지 정보를 찾지 못했습니다.')
+                        error_text.append(
+                            f"delete_image_error: db에서 [id:{delete_image}] 이미지 정보를 찾지 못했습니다."
+                        )
                     else:
                         delete_image_id.delete()
-            return Response({"error_list":error_text, "serializer_data":free_article_serializer.data}, status=status.HTTP_200_OK)
+            return Response(
+                {
+                    "error_list": error_text,
+                    "serializer_data": free_article_serializer.data,
+                },
+                status=status.HTTP_200_OK,
+            )
         else:
             return Response("권한이 없습니다", status=status.HTTP_403_FORBIDDEN)
-    
+
     def delete(self, request, article_free_id):
-        """ 자유게시판 특정 게시글 삭제 """
+        """자유게시판 특정 게시글 삭제"""
         if not request.user.is_authenticated:
             return Response("로그인 정보가 없습니다", status=status.HTTP_401_UNAUTHORIZED)
 
-        free_article = get_object_or_404(ArticlesFree, id=article_free_id)    
+        free_article = get_object_or_404(ArticlesFree, id=article_free_id)
         if request.user == free_article.author_id:
             free_article.delete()
             return Response("삭제되었습니다", status=status.HTTP_204_NO_CONTENT)
@@ -669,12 +805,16 @@ class ArticleFreeDetailView(APIView):
 
 class CommentFreeView(APIView):
     def post(self, request, article_free_id):
-        """ 자유게시판 댓글 작성 """
+        """자유게시판 댓글 작성"""
         if not request.user.is_authenticated:
-            return Response({"message": "로그인이 필요합니다."}, status=status.HTTP_401_UNAUTHORIZED)
+            return Response(
+                {"message": "로그인이 필요합니다."}, status=status.HTTP_401_UNAUTHORIZED
+            )
         if not request.user.is_email_verified:
-            return Response({"message": "이메일 인증이 필요합니다."}, status=status.HTTP_403_FORBIDDEN)
-        
+            return Response(
+                {"message": "이메일 인증이 필요합니다."}, status=status.HTTP_403_FORBIDDEN
+            )
+
         free_article = get_object_or_404(ArticlesFree, id=article_free_id)
         serializer = FreeCommentSerializer(data=request.data)
         if serializer.is_valid():
@@ -682,12 +822,12 @@ class CommentFreeView(APIView):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
-    def put(self, request, article_free_id,free_comment_id):
-        """ 자유게시판 댓글 수정 """
+
+    def put(self, request, article_free_id, free_comment_id):
+        """자유게시판 댓글 수정"""
         if not request.user.is_authenticated:
             return Response("로그인 정보가 없습니다", status=status.HTTP_401_UNAUTHORIZED)
-        
+
         free_article = get_object_or_404(ArticlesFree, id=article_free_id)
         free_comment = free_article.article_free_comment.get(id=free_comment_id)
         if request.user == free_comment.author_id:
@@ -699,12 +839,174 @@ class CommentFreeView(APIView):
                 return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         else:
             return Response("권한이 없습니다", status=status.HTTP_403_FORBIDDEN)
-    
-    def delete(self, request, article_free_id,free_comment_id):
-        """ 자유게시판 댓글 삭제 """
+
+    def delete(self, request, article_free_id, free_comment_id):
+        """자유게시판 댓글 삭제"""
         if not request.user.is_authenticated:
             return Response("로그인 정보가 없습니다", status=status.HTTP_401_UNAUTHORIZED)
-        
+
+        free_article = get_object_or_404(ArticlesFree, id=article_free_id)
+        free_comment = free_article.article_free_comment.get(id=free_comment_id)
+        if request.user == free_comment.author_id:
+            free_comment.delete()
+            return Response("댓글이 삭제되었습니다", status=status.HTTP_204_NO_CONTENT)
+        else:
+            return Response("권한이 없습니다", status=status.HTTP_403_FORBIDDEN)
+
+
+class ArticleFreeView(APIView):
+    def get(self, request):
+        """자유게시판 전체 게시글+이미지+댓글 조회"""
+        page = request.GET.get("page", 1) if request.GET.get("page", 1) else 1
+        free_article = ArticlesFree.objects.all()
+        all_free_paginator = Paginator(free_article, 20)
+        paginator_data = {
+            "filtered_recipes_count": all_free_paginator.count,  # 검색된 레시피 개수
+            "pages_num": all_free_paginator.num_pages,  # 총 페이지 수
+        }
+        if int(page) > all_free_paginator.num_pages:
+            return Response("요청한 페이지가 없습니다.", status=status.HTTP_404_NOT_FOUND)
+        page_obj = all_free_paginator.page(page)
+        serializer = FreeArticleSerializer(page_obj, many=True)
+        return Response(
+            {"pagenation_data": paginator_data, "serializer_data": serializer.data},
+            status=status.HTTP_200_OK,
+        )
+
+    def post(self, request):
+        """자유게시판 게시글 작성"""
+        if not request.user.is_authenticated:
+            return Response(
+                {"message": "로그인이 필요합니다."}, status=status.HTTP_401_UNAUTHORIZED
+            )
+        if not request.user.is_email_verified:
+            return Response(
+                {"message": "이메일 인증이 필요합니다."}, status=status.HTTP_403_FORBIDDEN
+            )
+
+        serializer = FreeArticleSerializer(
+            data=request.data, context={"request": request}
+        )
+        if serializer.is_valid():
+            serializer.save(author_id=request.user)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class ArticleFreeDetailView(APIView):
+    def get(self, request, article_free_id):
+        """자유게시판 특정 게시글+이미지+댓글 조회"""
+        free_article = get_object_or_404(ArticlesFree, id=article_free_id)
+        serializer = FreeArticleSerializer(free_article)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def put(self, request, article_free_id):
+        """자유게시판 특정 게시글+이미지 수정"""
+        if not request.user.is_authenticated:
+            return Response("로그인 정보가 없습니다", status=status.HTTP_401_UNAUTHORIZED)
+
+        free_article = get_object_or_404(ArticlesFree, id=article_free_id)
+        if request.user == free_article.author_id:
+            # 게시글 수정
+            free_article_serializer = FreeArticleSerializer(
+                free_article, data=request.data
+            )
+            if free_article_serializer.is_valid():
+                free_article_serializer.save()
+            else:
+                return Response(
+                    free_article_serializer.errors, status=status.HTTP_400_BAD_REQUEST
+                )
+            # 이미지 추가
+            new_images = request.FILES
+            if new_images:
+                for image in new_images.getlist("image"):
+                    ArticleFreeImages.objects.create(
+                        article_free_id=free_article, free_image=image
+                    )
+            # 이미지 삭제
+            delete_images = request.data.get("delete_image")
+            error_text = []
+            if delete_images:
+                print(type(delete_images))
+                delete_images = eval(delete_images)
+                for delete_image in delete_images:
+                    try:
+                        delete_image_id = ArticleFreeImages.objects.get(
+                            id=delete_image, article_free_id=free_article
+                        )
+                    except ObjectDoesNotExist:
+                        error_text.append(
+                            f"delete_image_error: db에서 [id:{delete_image}] 이미지 정보를 찾지 못했습니다."
+                        )
+                    else:
+                        delete_image_id.delete()
+            return Response(
+                {
+                    "error_list": error_text,
+                    "serializer_data": free_article_serializer.data,
+                },
+                status=status.HTTP_200_OK,
+            )
+        else:
+            return Response("권한이 없습니다", status=status.HTTP_403_FORBIDDEN)
+
+    def delete(self, request, article_free_id):
+        """자유게시판 특정 게시글 삭제"""
+        if not request.user.is_authenticated:
+            return Response("로그인 정보가 없습니다", status=status.HTTP_401_UNAUTHORIZED)
+
+        free_article = get_object_or_404(ArticlesFree, id=article_free_id)
+        if request.user == free_article.author_id:
+            free_article.delete()
+            return Response("삭제되었습니다", status=status.HTTP_204_NO_CONTENT)
+        else:
+            return Response("권한이 없습니다", status=status.HTTP_403_FORBIDDEN)
+
+
+class CommentFreeView(APIView):
+    def post(self, request, article_free_id):
+        """자유게시판 댓글 작성"""
+        if not request.user.is_authenticated:
+            return Response(
+                {"message": "로그인이 필요합니다."}, status=status.HTTP_401_UNAUTHORIZED
+            )
+        if not request.user.is_email_verified:
+            return Response(
+                {"message": "이메일 인증이 필요합니다."}, status=status.HTTP_403_FORBIDDEN
+            )
+
+        free_article = get_object_or_404(ArticlesFree, id=article_free_id)
+        serializer = FreeCommentSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save(author_id=request.user, article_free_id=free_article)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def put(self, request, article_free_id, free_comment_id):
+        """자유게시판 댓글 수정"""
+        if not request.user.is_authenticated:
+            return Response("로그인 정보가 없습니다", status=status.HTTP_401_UNAUTHORIZED)
+
+        free_article = get_object_or_404(ArticlesFree, id=article_free_id)
+        free_comment = free_article.article_free_comment.get(id=free_comment_id)
+        if request.user == free_comment.author_id:
+            serializer = FreeCommentSerializer(free_comment, data=request.data)
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data, status=status.HTTP_200_OK)
+            else:
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            return Response("권한이 없습니다", status=status.HTTP_403_FORBIDDEN)
+
+    def delete(self, request, article_free_id, free_comment_id):
+        """자유게시판 댓글 삭제"""
+        if not request.user.is_authenticated:
+            return Response("로그인 정보가 없습니다", status=status.HTTP_401_UNAUTHORIZED)
+
         free_article = get_object_or_404(ArticlesFree, id=article_free_id)
         free_comment = free_article.article_free_comment.get(id=free_comment_id)
         if request.user == free_comment.author_id:
