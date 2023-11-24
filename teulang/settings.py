@@ -38,8 +38,10 @@ INSTALLED_APPS = [
     "rest_framework",
     "rest_framework_simplejwt",  # 오류 찾아보다 추가 안되어 있길래 추가
     "corsheaders",
+    "computed_property",
     "users",
     "articles",
+    "my_frige",
 ]
 
 REST_FRAMEWORK = {
