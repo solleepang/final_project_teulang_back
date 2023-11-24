@@ -354,6 +354,8 @@ class RecipeDetailView(APIView):
 class StarRateView(APIView):
     def post(self, request, article_recipe_id):
         """요청 유저 아이디로 해당 레시피에 별점 추가"""
+        if not request.user.is_email_verified:
+            return Response({"message": "이메일 인증이 필요합니다."}, status=status.HTTP_403_FORBIDDEN)
         # 로그인 정보 확인
         try:
             user = User.objects.get(id=request.user.id)

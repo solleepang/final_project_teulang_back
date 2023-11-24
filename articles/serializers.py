@@ -134,12 +134,12 @@ class RecipeSerializer(serializers.ModelSerializer):
 
 
 class FreeCommentSerializer(serializers.ModelSerializer):
-    comment_user_data = serializers.SerializerMethodField()
+    user_data = serializers.SerializerMethodField()
     class Meta:
         model = CommentArticlesFree
         fields = "__all__"
 
-    def get_comment_user_data(self, obj):
+    def get_user_data(self, obj):
         """ 해당 댓글 작성한 유저 데이터(이메일, 프로필, 닉네임, 팔로우)"""
         if obj.author_id:
             user = User.objects.get(id=obj.author_id.id)
@@ -154,7 +154,7 @@ class FreeImagesSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
 class FreeArticleSerializer(serializers.ModelSerializer):
-    article_user_data = serializers.SerializerMethodField()
+    user_data = serializers.SerializerMethodField()
     images = serializers.SerializerMethodField()
     article_free_comment = FreeCommentSerializer(many=True, read_only=True)
     class Meta:
@@ -168,7 +168,7 @@ class FreeArticleSerializer(serializers.ModelSerializer):
             ArticleFreeImages.objects.create(article_free_id=free_article, free_image=image)
         return free_article
     
-    def get_article_user_data(self, obj):
+    def get_user_data(self, obj):
         """ 해당 댓글 작성한 유저 데이터(이메일, 프로필, 닉네임, 팔로우)"""
         if obj.author_id:
             user = User.objects.get(id=obj.author_id.id)
