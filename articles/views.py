@@ -63,8 +63,12 @@ class RecipeView(APIView):
             ).order_by("-bookmark_count")
         all_recipes_paginator = Paginator(recipes, 20)
         page_obj = all_recipes_paginator.page(page)
+        paginator_data = {
+            "filtered_recipes_count": all_recipes_paginator.count,  # 검색된 레시피 개수
+            "pages_num": all_recipes_paginator.num_pages,  # 총 페이지 수
+        }
         serializer = RecipeSerializer(page_obj, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response({"pagenation_data": paginator_data, "serializer_data": serializer.data}, status=status.HTTP_200_OK)
 
     # 레시피, 재료, 순서 생성
     def post(self, request):
