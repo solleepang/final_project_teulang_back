@@ -24,27 +24,23 @@ class MyFrigeView(APIView):
         frige_inside = MyFrigeInside.objects.filter(user_id=user_id).order_by('expiration_date')
         serializer = MyFrigeInsideSerializer(frige_inside, many=True)
         warning_state_ingredients = [x.title for x in frige_inside.filter(state=2)]
-        print(warning_state_ingredients)
         recipes = []
         for i in range(len(warning_state_ingredients)):
             if i < 1:
                 recipes = ArticleRecipe.objects.filter(
                     recipe_ingredients__ingredients__contains=warning_state_ingredients[i].strip()
                 ).distinct()
-                print(recipes)
             else:
                 recipes = recipes.filter(
                     recipe_ingredients__ingredients__contains=warning_state_ingredients[i].strip()
                 ).distinct()
-        print(recipes)
+        recommend_data = []
         if recipes:
             recommend_data = {
                 "recommand_recipe_id": recipes[0].id,
                 "warning_state_ingredients": warning_state_ingredients
             }
-            return Response({"recommend_data":recommend_data, "frige_serializer_data":serializer.data}, status=status.HTTP_200_OK)
-        return Response(serializer.data, status=status.HTTP_200_OK)
-
+        return Response({"recommend_data":recommend_data, "frige_serializer_data":serializer.data}, status=status.HTTP_200_OK)
     
     def post(self, request, user_id):
         """ user_id 유저의 냉장고 내역 등록 """
