@@ -664,7 +664,7 @@ class DetectObjectsAPI(APIView):
         # 클래스 이름 얻기
         class_names = results.names
 
-        # 중복 제거된 감지된 클래스 얻기
+        # 중복 제거된 클래스 얻기
         detected_classes_set = set([class_names[int(r)] for r in results.boxes.cls])
         detected_classes = list(detected_classes_set)
 
@@ -676,7 +676,7 @@ class DetectObjectsAPI(APIView):
         current_time = datetime.now().strftime("%Y%m%d%H%M%S")
         output_image_path = os.path.join(output_directory, f"output_{current_time}.png")
 
-        # 경계 상자와 주석이 추가된 이미지를 그려서 저장
+        # 박스와 주석이 추가된 이미지를 그려서 저장
         result_plotted = results.plot(line_width=1)
         cv.imwrite(output_image_path, result_plotted)
 
