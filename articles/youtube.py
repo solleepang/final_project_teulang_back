@@ -50,13 +50,13 @@ class YoutubeSummary(APIView):
         video_id = self.extract_youtube_video_id(video_url)
 
         if not video_id:
-            return f"Invalid YouTube video URL: {video_url}"
+            return f"올바른 유튜브 url이 아닙니다. : {video_url}"
 
         # Try to retrieve the Korean transcript
         transcript = self.get_video_transcript(video_id, language="ko")
 
         if transcript is None:
-            return f"No Korean transcript found for this video: {video_url}"
+            return f"한글 자막이 없는 영상입니다.: {video_url}"
 
         summary = self.generate_summary(transcript)
         return summary
@@ -66,12 +66,16 @@ class YoutubeSummary(APIView):
         video_url = request.data.get("url", "")
         if not video_url:
             return Response(
-                {"message": "Please provide a YouTube video URL"},
+                {"message": "유튜브 url을 정확하게 입력해주세요"},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
         result = self.summarize_youtube_video(video_url)
-        return Response({"summary": result}, status=status.HTTP_200_OK)
+        # return Response({"summary": result}, status=status.HTTP_200_OK)
+        if "올바른 유튜브 url이 아닙니다." in result or "한글 자막이 없는 영상입니다." in result:
+            return Response({"message": result}, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            return Response({"summary": result}, status=status.HTTP_200_OK)
 
 if __name__ == '__main__':
     url = "https://www.youtube.com/watch?v=D1R-jKKp3NA"
