@@ -97,15 +97,9 @@ DATABASES = {
 # https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators
 
 AUTH_PASSWORD_VALIDATORS = [
-    # {
-    #     "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
-    # },
     {
         "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
     },
-    # {
-    #     "NAME": "django.contrib.auth.password_validation.CommonPasswordValidator",
-    # },
     {
         "NAME": "django.contrib.auth.password_validation.NumericPasswordValidator",
     },
@@ -148,9 +142,9 @@ SIMPLE_JWT = {
     "USER_ID_FIELD": "id",
     "USER_ID_CLAIM": "user_id",
     "TOKEN_OBTAIN_SERIALIZER": "users.serializers.LoginSerializer",
-    "ROTATE_REFRESH_TOKENS": False,  # 오류 찾아보다 추가했습니다
-    "BLACKLIST_AFTER_ROTATION": False,  # 오류 찾아보다 추가했습니다
-    "UPDATE_LAST_LOGIN": False,  # 오류 찾아보다 추가했습니다
+    "ROTATE_REFRESH_TOKENS": False,
+    "BLACKLIST_AFTER_ROTATION": False,
+    "UPDATE_LAST_LOGIN": False,
 }
 
 
