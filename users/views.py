@@ -21,6 +21,7 @@ from django.core.mail import EmailMessage
 
 import random
 from django.utils import timezone
+from teulang.settings import env
 
 
 class ResetPasswordView(APIView):
@@ -159,7 +160,7 @@ class SignupView(APIView):
         if serializer.is_valid(raise_exception=True):
             user = serializer.save()
             # 도메인
-            domain_address="http://127.0.0.1:8000"
+            domain_address=env('DOMAIN_ADDRESS')
 
             # 토큰 생성
             uid = urlsafe_base64_encode(force_bytes(user.pk))
