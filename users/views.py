@@ -180,30 +180,9 @@ class SignupView(APIView):
             from_email = 'teulang@naver.com'
             recipient_list = [user.email]
 
-            # html_version = 'email_confirmation_signup.html'
-            # html_message = render_to_string(html_version)
-            
-            # 3
-            # template = get_template('email/signup_confirmation.html')
-            # html_content = render_to_string(template)
-
-            # send_mail(
-            #     subject,
-            #     None, # Pass None because it's a HTML mail
-            #     from_email,
-            #     recipient_list,
-            #     fail_silently=False,
-            #     html_message = html_content
-            # )
-            
-            #2
-            # text_content = "This is an important message."
             html_version = 'email/signup_confirmation.html'
             html_content = render_to_string(html_version,{"verification_url":verification_url})
-            # msg = EmailMultiAlternatives(subject, text_content, from_email, recipient_list)
-            # msg.attach_alternative(html_content, "text/html")
-            # msg.send()
-            1
+
             email = EmailMessage(
                 subject=subject,
                 body=html_content,
@@ -212,13 +191,6 @@ class SignupView(APIView):
             )
             email.content_subtype = "html"  # Main content is now text/html
             email.send()
-
-
-            
-
-            # # 메일 전송
-            # EmailMessage(subject=subject, body=message,
-            #              from_email=from_email, to=recipient_list).send()
 
             return Response({"message": "회원가입이 완료되었습니다. 인증 이메일이 전송되었습니다."}, status=status.HTTP_201_CREATED)
         else:
