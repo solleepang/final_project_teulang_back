@@ -21,6 +21,11 @@ from django.core.mail import EmailMessage
 
 import random
 from django.utils import timezone
+from teulang.settings import env
+from teulang import settings
+from django.template.loader import render_to_string
+from django.core.mail import EmailMultiAlternatives, send_mail
+from django.template.loader import get_template
 
 
 class ResetPasswordView(APIView):
@@ -159,7 +164,7 @@ class SignupView(APIView):
         if serializer.is_valid(raise_exception=True):
             user = serializer.save()
             # 도메인
-            domain_address="http://127.0.0.1:8000"
+            domain_address=env('DOMAIN_ADDRESS')
 
             # 토큰 생성
             uid = urlsafe_base64_encode(force_bytes(user.pk))
@@ -175,9 +180,17 @@ class SignupView(APIView):
             from_email = 'teulang@naver.com'
             recipient_list = [user.email]
 
-            # 메일 전송
-            EmailMessage(subject=subject, body=message,
-                         from_email=from_email, to=recipient_list).send()
+            html_version = 'email/signup_confirmation.html'
+            html_content = render_to_string(html_version,{"verification_url":verification_url})
+
+            email = EmailMessage(
+                subject=subject,
+                body=html_content,
+                from_email=from_email,
+                to=recipient_list
+            )
+            email.content_subtype = "html"  # Main content is now text/html
+            email.send()
 
             return Response({"message": "회원가입이 완료되었습니다. 인증 이메일이 전송되었습니다."}, status=status.HTTP_201_CREATED)
         else:
