@@ -1,5 +1,5 @@
 from django.urls import path
-from articles import views, youtube
+from articles import views
 
 urlpatterns = [
     path("recipe/", views.RecipeView.as_view(), name="recipe_view"),
@@ -82,10 +82,5 @@ urlpatterns = [
         "detect_objects/",
         views.DetectObjectsAPI.as_view(),
         name="detect_objects_api",
-    ),
-    path(
-        "youtube/",
-        youtube.YoutubeSummary.as_view(),
-        name="youtube_summary",
     ),
 ]
