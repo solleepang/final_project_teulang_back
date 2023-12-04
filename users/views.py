@@ -1,11 +1,11 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from articles.models import ArticleRecipe
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework.generics import get_object_or_404
-from users.serializers import LoginSerializer, UserSerializer, ProfileUpdateSerializer, UserInfoSerializer, ResetPasswordSerializer
+from users.serializers import LoginSerializer, UserSerializer, ProfileUpdateSerializer, UserInfoSerializer, ResetPasswordSerializer, KakaoSignupSerializer
 from users.models import User, VerificationCode
 
 from django.core.validators import validate_email
@@ -24,8 +24,208 @@ from django.utils import timezone
 from teulang.settings import env
 from teulang import settings
 from django.template.loader import render_to_string
-from django.core.mail import EmailMultiAlternatives, send_mail
-from django.template.loader import get_template
+
+import jwt
+from django.shortcuts import redirect
+import requests
+import string # 비밀번호 무작위 설정을 위해 추가
+from teulang.settings import KAKAO_CONFIG, KAKAO_LOGIN_URI, KAKAO_TOKEN_URI, KAKAO_PROFILE_URI
+from rest_framework_simplejwt.tokens import RefreshToken
+
+
+class KakaoLoginView(APIView):
+    permission_classes = (AllowAny,)
+
+    # serializer_class = KakaoLoginSerializer
+
+    def get(self, request):
+        """
+        카카오 로그인 동의 화면을 호출하고, 사용자 동의를 거쳐 인가 코드를 발급합니다
+        """
+
+        client_id = KAKAO_CONFIG['KAKAO_REST_API_KEY']
+        redirect_uri = KAKAO_CONFIG['KAKAO_REDIRECT_URI']
+
+        uri = f"{KAKAO_LOGIN_URI}?response_type=code&client_id={client_id}&redirect_uri={redirect_uri}&scope=profile_nickname,account_email"
+
+        res = redirect(uri)
+        return res
+
+    def post(self, request): #request_body={"email":email,"social_id":social_id}
+        email = request.data["email"]
+        social_id = request.data["social_id"]
+
+        if User.objects.filter(social_id=social_id, email=email).exists():
+            user = User.objects.get(social_id=social_id)
+        else:
+            raise ValidationError("사용자가 존재하지 않습니다.")
+
+        user = User.objects.get(email=email, social_id=social_id)
+
+        if user is not None:
+
+            refreshToken = RefreshToken.for_user(user)
+            accessToken = refreshToken.access_token
+
+            decodeJTW = jwt.decode(str(accessToken), env('SECRET_KEY'), algorithms=["HS256"]);
+
+            # 페이로드 커스텀
+            decodeJTW['email'] = email
+            decodeJTW['nickname'] = user.nickname
+            decodeJTW['user_img'] = user.user_img.url
+
+            #encode
+            encoded = jwt.encode(decodeJTW, env('SECRET_KEY'), algorithm="HS256")
+
+            return Response({
+                'status': True,
+                'refresh': str(refreshToken),
+                'access': str(encoded),
+            })
+
+        else:
+            return Response({
+                'status': False
+            })
+
+
+class KaKaoUserView(APIView):
+    permission_classes = (AllowAny,)
+    """
+    kakao 소셜로그인을 통한 회원가입과 기존 회원계정 update합니다.
+    """
+
+    # 소셜로그인으로 처음 회원가입 후 로그인
+    def post(self, request):    # request body = user_json={"email":user_email,"nickname":user_nickname,"social_id":social_id,"email_verified":True or False}
+
+        # string과 for문, random을 사용한 random 비밀번호 생성
+        pw_candidate = string.ascii_letters + string.digits + string.punctuation
+        new_pw = ""
+        for i in range(10):     # 10자리의 랜덤 비밀번호 생성
+            new_pw += random.choice(pw_candidate)
+
+        request_data  = request.POST.copy()
+        for key, value in request.data.items():
+            request_data[f'{key}']=value
+
+        request_data['password'] = new_pw
+
+        serializer = KakaoSignupSerializer(data=request_data)
+
+        if serializer.is_valid(raise_exception=True):
+            user = serializer.save()
+
+            login_url = f"{env('DOMAIN_ADDRESS')}/users/kakao/login/"
+            social_login_res = requests.post(login_url, data={"email":f"{request_data['email']}","social_id":f"{request_data['social_id']}",})
+            return Response(social_login_res, status=status.HTTP_200_OK)
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    # 기존 회원 & 소셜로그인 이력 없는 경우, social_id 저장
+    def put(self, request): # request_body = {"email":user_email, "social_id":social_id,"email_verified":True or False}
+        user_email = request.data['email']
+        social_id = request.data['social_id']
+        update_user = User.objects.get(email=user_email)
+
+        serializer = ProfileUpdateSerializer(update_user, data={"social_id":f"{social_id}"}, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class KakaoCallbackView(APIView):
+    permission_classes = (AllowAny,)
+
+    def get(self, request):
+        """
+        kakao 인가 코드로 토큰 발급과 user_info를 요청합니다.
+        """
+
+        data = request.query_params.copy()
+        code = data.get('code') # code 가져오기
+
+        if not code:
+            return Response({"message":"인증 코드가 발급되지 않았습니다."},status=status.HTTP_400_BAD_REQUEST)
+
+        # access_token 발급 요청
+        request_data = {
+            "grant_type":"authorization_code",
+            "client_id": f"{KAKAO_CONFIG['KAKAO_REST_API_KEY']}",
+            "redirect_uri":f"{KAKAO_CONFIG['KAKAO_REDIRECT_URI']}",
+            "code":f"{code}",
+            "client_secret":f"{KAKAO_CONFIG['KAKAO_CLIENT_SECRET_KEY']}"
+        }
+
+        token_headers = {"Content-type": "application/x-www-form-urlencoded;charset=utf-8"}
+
+        token_res = requests.post(KAKAO_TOKEN_URI, data=request_data, headers=token_headers)
+
+        token_json = token_res.json()
+        access_token = token_json['access_token']
+
+        if not access_token:
+            return Response({"message":"access_token 발급 실패"},status=status.HTTP_400_BAD_REQUEST)
+        access_token = f"Bearer {access_token}"
+
+
+        # kakao 회원정보 요청
+        auth_headers = {
+            "Authorization": access_token,
+            "Content-type": "application/x-www-form-urlencoded;charset=utf-8",
+        }
+        user_info_res = requests.get(KAKAO_PROFILE_URI, headers=auth_headers)
+        user_info_json = user_info_res.json()
+
+
+        social_type = 'kakao'
+        social_id = f"{social_type}_{user_info_json.get('id')}"
+
+
+        kakao_account = user_info_json.get('kakao_account')
+
+        if not kakao_account:
+            return Response({"message":"잘못된 요청입니다. kakao_acount가 존재하지 않습니다."}, status=status.HTTP_400_BAD_REQUEST)
+        user_email = str(kakao_account.get('email'))
+        user_nickname = str(kakao_account['profile'].get('nickname'))
+
+        is_user_email_verifed = kakao_account['is_email_verified']
+        user_json={
+            "email":user_email,
+            "nickname":user_nickname,
+            "social_id":social_id,
+            "email_verified":is_user_email_verifed,
+        }
+
+        """
+        회원가입 및 로그인 처리
+        """
+        email_list = User.objects.values_list('email', flat=True)
+        social_id_list = User.objects.values_list('social_id', flat=True)
+
+
+        # db에 이메일 있는데 소셜 id가 있는 경우 후 로그인
+        if (user_email in email_list) and (social_id in social_id_list):
+            login_url = f"{env('DOMAIN_ADDRESS')}/users/kakao/login/"
+            social_login_res = requests.post(login_url, data={"email":f"{user_email}","social_id":f"{social_id}",})
+            return Response(social_login_res, status=status.HTTP_200_OK)
+
+        # db에 이메일이 있는 사용자라면 회원정보 업데이트 후 로그인 # request_body = {"email":user_email, "social_id":social_id,"email_verified":True or False}
+        elif user_email in email_list:
+            social_update_url = f"{env('DOMAIN_ADDRESS')}/users/kakao/user/"
+            social_update_res = requests.put(social_update_url, data={"email":f"{user_email}","social_id":f"{social_id}","email_verified":f"{is_user_email_verifed}"})
+            login_url = f"{env('DOMAIN_ADDRESS')}/users/kakao/login/"
+            social_login_res = requests.post(login_url, data={"email":f"{user_email}","social_id":f"{social_id}",})
+            return Response(social_login_res, status=status.HTTP_200_OK)
+
+        # db에 이메일이 없는 사용자라면 회원가입 -> 프론트에 user 정보 보내주기
+        elif not user_email in email_list:
+            # 닉네임과 비밀번호 설정을 위한 회원가입창으로 넘어갈 때 보내는 user 정보
+            return Response(user_json, status=status.HTTP_200_OK)
+
+        else:
+            return Response({"message":"원인 불명 에러입니다."}, status=status.HTTP_400_BAD_REQUEST)
 
 
 class ResetPasswordView(APIView):
@@ -82,14 +282,15 @@ class ResetPasswordView(APIView):
         try:
             request_user = User.objects.get(email=request.data['email'])
             request_code = request.data['code']
-            print(request_user)
+
             # 사용자에게 보내진 이메일 인증 코드
-            verification = VerificationCode.objects.filter(user=request_user.id).order_by('-created_at')
-            verification_code = verification[0].code
+            verification_code = VerificationCode.objects.filter(user=request_user.id).order_by('-created_at').first()
+            if not verification_code:
+                raise Exception("인증코드가 존재하지 않습니다.")
 
             # 이메일 인증 유효기간과 인증코드의 생성된 기간
             expiration_period = 13
-            generated_period = timezone.now() - verification[0].created_at
+            generated_period = timezone.now() - verification_code
 
             if verification_code != request_code:
                 return Response({"message":"코드가 맞지 않습니다. 다시 입력해주세요."}, status=status.HTTP_400_BAD_REQUEST)
@@ -122,13 +323,13 @@ class EmailPasswordVerificationView(APIView):
             request_code = request.data['code']
 
             # 사용자에게 보내진 이메일 인증 코드
-            verification = VerificationCode.objects.filter(user=request_user.id).order_by('-created_at')
-            print(verification)
-            verification_code = verification[0].code
+            verification_code = VerificationCode.objects.filter(user=request_user.id).order_by('-created_at').first()
+            if not verification_code:
+                raise Exception("인증코드가 존재하지 않습니다.")
 
             # 이메일 인증 유효기간과 인증코드의 생성된 기간
             expiration_period = 3
-            generated_period = timezone.now() - verification[0].created_at
+            generated_period = timezone.now() - verification_code
 
             # DB에 저장된 인증 코드와 유저가 입력한 코드의 일치 여부와 유효기간이 지났는지 확인
             if verification_code == request_code:
