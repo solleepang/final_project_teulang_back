@@ -128,12 +128,6 @@ class UserSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({'password': err.messages})
         if password != password_check:
             raise ValidationError("비밀번호와 확인 비밀번호가 일치하지 않습니다. 다시 입력해주세요.")
-        # 8
-        if (len(password) < 8
-            or not (contains_uppercase_letter(password) or contains_lowercase_letter(password))
-            or not contains_number(password)
-            or not contains_special_character(password)):
-            raise serializers.ValidationError("비밀번호는 8자 이상, 문자, 숫자, 특수문자 조합이어야 합니다.") # 400 non_field_errors
         return attrs
 
     def create(self, validated_data):
@@ -247,13 +241,6 @@ class ProfileUpdateSerializer(serializers.ModelSerializer):
             validate_password(value)
         except ValidationError as e:
             raise serializers.ValidationError(e.messages)
-
-        # Additional password complexity checks
-        if (len(value) < 8
-            or not (contains_uppercase_letter(value) or contains_lowercase_letter(value))
-            or not contains_number(value)
-            or not contains_special_character(value)):
-            raise serializers.ValidationError("비밀번호는 8자 이상, 문자, 숫자, 특수문자 조합이어야 합니다.") # 400 non_field_errors
 
         return value
 
