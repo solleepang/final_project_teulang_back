@@ -42,7 +42,12 @@ import tempfile
 import os
 from django.conf import settings
 from datetime import datetime
-
+import re
+from pytube import YouTube
+from moviepy.editor import *
+import openai
+from dotenv import load_dotenv
+from youtube_transcript_api import YouTubeTranscriptApi, TranscriptsDisabled
 
 class RecipeView(APIView):
     # 레시피 불러오기(전체, 정렬(인기순/최신순))
@@ -1020,3 +1025,72 @@ class CommentFreeView(APIView):
             return Response("댓글이 삭제되었습니다", status=status.HTTP_204_NO_CONTENT)
         else:
             return Response("권한이 없습니다", status=status.HTTP_403_FORBIDDEN)
+
+
+
+class YoutubeSummary(APIView):
+    def __init__(self):
+        super().__init__()
+        load_dotenv()
+
+    def extract_youtube_video_id(self, url: str) -> str | None:
+        found = re.search(r"(?:youtu\.be\/|watch\?v=)([\w-]+)", url)
+        if found:
+            return found.group(1)
+        return None
+    def get_video_transcript(self, video_id: str, language: str = "ko") -> str | None:
+        try:
+            transcript = YouTubeTranscriptApi.get_transcript(video_id, languages=[language])
+            text = " ".join([line["text"] for line in transcript])
+            return text
+        except TranscriptsDisabled:
+            return None
+
+
+
+    def generate_summary(self, text: str) -> str:
+        openai.api_key = os.getenv("OPENAI_API_KEY")
+
+        instructions = "영상의 요리방법만 요약해주세요"
+        response = openai.Completion.create(
+            engine="text-davinci-003",
+            prompt=f"{instructions}\n\n{text[:1000]}",  # Truncate the prompt
+            temperature=0.7,
+            max_tokens=800,  # 글자수
+            top_p=1.0,
+            frequency_penalty=0.0,
+            presence_penalty=0.0,
+            stop=None
+        )
+        return response.choices[0].text.strip()
+
+    def summarize_youtube_video(self, video_url: str) -> str:
+        video_id = self.extract_youtube_video_id(video_url)
+
+        if not video_id:
+            return f"올바른 유튜브 url이 아닙니다. : {video_url}"
+
+        # Try to retrieve the Korean transcript
+        transcript = self.get_video_transcript(video_id, language="ko")
+
+        if transcript is None:
+            return f"한글 자막이 없는 영상입니다.: {video_url}"
+
+        summary = self.generate_summary(transcript)
+        return summary
+
+
+    def post(self, request):
+        video_url = request.data.get("url", "")
+        if not video_url:
+            return Response(
+                {"message": "유튜브 url을 정확하게 입력해주세요"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        result = self.summarize_youtube_video(video_url)
+        # return Response({"summary": result}, status=status.HTTP_200_OK)
+        if "올바른 유튜브 url이 아닙니다." in result or "한글 자막이 없는 영상입니다." in result:
+            return Response({"message": result}, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            return Response({"summary": result}, status=status.HTTP_200_OK)
