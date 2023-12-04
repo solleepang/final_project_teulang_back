@@ -147,6 +147,7 @@ SIMPLE_JWT = {
     "ROTATE_REFRESH_TOKENS": False,
     "BLACKLIST_AFTER_ROTATION": False,
     "UPDATE_LAST_LOGIN": False,
+    'USER_AUTHENTICATION_RULE': 'rest_framework_simplejwt.authentication.default_user_authentication_rule',
 }
 
 
@@ -163,3 +164,15 @@ EMAIL_USE_TLS = True
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER # 응답 메일 관련 설정
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 URL_FRONT = 'https://teulang.net'
+
+DOMAIN_ADDRESS = env('DOMAIN_ADDRESS')
+
+KAKAO_CONFIG = {
+    "KAKAO_REST_API_KEY": env('KAKAO_REST_API_KEY'),
+    "KAKAO_REDIRECT_URI": f"{DOMAIN_ADDRESS}/oauth/kakao/login/callback/",
+    "KAKAO_CLIENT_SECRET_KEY": env('KAKAO_CLIENT_SECRET_KEY')
+}
+
+kakao_login_uri = "https://kauth.kakao.com/oauth/authorize"
+kakao_token_uri = "https://kauth.kakao.com/oauth/token"
+kakao_profile_uri = "https://kapi.kakao.com/v2/user/me"
