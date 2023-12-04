@@ -248,7 +248,7 @@ class KakaoCallbackView(APIView):
         # db에 이메일이 없는 사용자라면 회원가입 -> 프론트에 user 정보 보내주기
         elif not user_email in email_list:
             # 닉네임과 비밀번호 설정을 위한 회원가입창으로 넘어갈 때 보내는 user 정보
-            user_uri = f"{URL_FRONT}/?email={user_email}&nickname={user_nickname}&social_id={social_id}&email_verified={is_user_email_verifed}"
+            user_uri = f"{URL_FRONT}/social-nickname-check/?email={user_email}&nickname={user_nickname}&social_id={social_id}&email_verified={is_user_email_verifed}"
 
             res = redirect(user_uri)
             return res
