@@ -61,6 +61,7 @@ class User(AbstractBaseUser):
         - 이메일 인증 기능 구현 시 default=False로 변경해야 합니다.
     - is_staff : 스태프 권한 여부입니다.
     - is_email_verified : 이메일 인증 여부에 대해 담고 있습니다.
+    - social_id : 소셜 로그인 시 확인되는 social_id입니다.
     """
 
     email = models.EmailField('이메일', max_length=255, unique=True)
@@ -73,6 +74,7 @@ class User(AbstractBaseUser):
     user_img = models.ImageField('프로필 이미지', upload_to='user/user_img/%Y/%m/%D', default='user_defalt.jpg')
     following = models.ManyToManyField('self', verbose_name='팔로잉', related_name='followers',symmetrical=False, blank=True)
     is_email_verified = models.BooleanField('이메일 검증 여부', default=False)
+    social_id = models.CharField('소셜 아이디', max_length=30, blank=True, null=True)
 
     point = models.IntegerField(default=0)
     objects = UserManager()
