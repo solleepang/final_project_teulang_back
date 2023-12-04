@@ -29,7 +29,7 @@ import jwt
 from django.shortcuts import redirect
 import requests
 import string # 비밀번호 무작위 설정을 위해 추가
-from teulang.settings import KAKAO_CONFIG, KAKAO_LOGIN_URI, KAKAO_TOKEN_URI, KAKAO_PROFILE_URI
+from teulang.settings import KAKAO_CONFIG, KAKAO_LOGIN_URI, KAKAO_TOKEN_URI, KAKAO_PROFILE_URI, URL_FRONT
 from rest_framework_simplejwt.tokens import RefreshToken
 
 
@@ -58,7 +58,7 @@ class KakaoLoginView(APIView):
         if User.objects.filter(social_id=social_id, email=email).exists():
             user = User.objects.get(social_id=social_id)
         else:
-            raise ValidationError("사용자가 존재하지 않습니다.")
+            return Response({"message":"사용자가 존재하지 않습니다."}, status=status.HTTP_400_BAD_REQUEST)
 
         user = User.objects.get(email=email, social_id=social_id)
 
@@ -115,9 +115,17 @@ class KaKaoUserView(APIView):
         if serializer.is_valid(raise_exception=True):
             user = serializer.save()
 
+            # 로그인해서 refresh, access token 발급
             login_url = f"{env('DOMAIN_ADDRESS')}/users/kakao/login/"
             social_login_res = requests.post(login_url, data={"email":f"{request_data['email']}","social_id":f"{request_data['social_id']}",})
-            return Response(social_login_res, status=status.HTTP_200_OK)
+            refresh = social_login_res.text.split(',')[1].split(':')[1][1:]
+            access = social_login_res.text.split(',')[2].split(':')[1][1:]
+            access = access[:-2]
+
+            token_url = f"{URL_FRONT}/?refresh={refresh}&access={access}"
+
+            res = redirect(token_url)
+            return res
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -209,20 +217,42 @@ class KakaoCallbackView(APIView):
         if (user_email in email_list) and (social_id in social_id_list):
             login_url = f"{env('DOMAIN_ADDRESS')}/users/kakao/login/"
             social_login_res = requests.post(login_url, data={"email":f"{user_email}","social_id":f"{social_id}",})
-            return Response(social_login_res, status=status.HTTP_200_OK)
+
+            # 로그인해서 refresh, access token 발급
+            refresh = social_login_res.text.split(',')[1].split(':')[1][1:]
+            access = social_login_res.text.split(',')[2].split(':')[1][1:]
+            access = access[:-2]
+
+            token_url = f"{URL_FRONT}/?refresh={refresh}&access={access}"
+
+            res = redirect(token_url)
+            return res
 
         # db에 이메일이 있는 사용자라면 회원정보 업데이트 후 로그인 # request_body = {"email":user_email, "social_id":social_id,"email_verified":True or False}
         elif user_email in email_list:
             social_update_url = f"{env('DOMAIN_ADDRESS')}/users/kakao/user/"
             social_update_res = requests.put(social_update_url, data={"email":f"{user_email}","social_id":f"{social_id}","email_verified":f"{is_user_email_verifed}"})
+
+            # 로그인해서 refresh, access token 발급
             login_url = f"{env('DOMAIN_ADDRESS')}/users/kakao/login/"
             social_login_res = requests.post(login_url, data={"email":f"{user_email}","social_id":f"{social_id}",})
-            return Response(social_login_res, status=status.HTTP_200_OK)
+            refresh = social_login_res.text.split(',')[1].split(':')[1][1:]
+            access = social_login_res.text.split(',')[2].split(':')[1][1:]
+            access = access[:-2]
+
+            token_url = f"{URL_FRONT}/?refresh={refresh}&access={access}"
+
+            res = redirect(token_url)
+            return res
 
         # db에 이메일이 없는 사용자라면 회원가입 -> 프론트에 user 정보 보내주기
         elif not user_email in email_list:
             # 닉네임과 비밀번호 설정을 위한 회원가입창으로 넘어갈 때 보내는 user 정보
-            return Response(user_json, status=status.HTTP_200_OK)
+            user_json
+            user_uri = f"{URL_FRONT}/?email={user_email}&nickname={user_nickname}&social_id={social_id}&email_verified={is_user_email_verifed}"
+
+            res = redirect(user_uri)
+            return res
 
         else:
             return Response({"message":"원인 불명 에러입니다."}, status=status.HTTP_400_BAD_REQUEST)
