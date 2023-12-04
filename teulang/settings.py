@@ -166,7 +166,7 @@ EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD')
 EMAIL_USE_TLS = True
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER # 응답 메일 관련 설정
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
-URL_FRONT = 'https://teulang.net'
+URL_FRONT = "http://localhost:3000" # 'https://teulang.net'
 
 DOMAIN_ADDRESS = env('DOMAIN_ADDRESS')
 
