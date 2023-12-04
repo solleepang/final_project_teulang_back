@@ -29,7 +29,7 @@ import jwt
 from django.shortcuts import redirect
 import requests
 import string # 비밀번호 무작위 설정을 위해 추가
-from teulang.settings import KAKAO_CONFIG, kakao_login_uri, kakao_token_uri, kakao_profile_uri
+from teulang.settings import KAKAO_CONFIG, KAKAO_LOGIN_URI, KAKAO_TOKEN_URI, KAKAO_PROFILE_URI
 from rest_framework_simplejwt.tokens import RefreshToken
 
 
@@ -46,7 +46,7 @@ class KakaoLoginView(APIView):
         client_id = KAKAO_CONFIG['KAKAO_REST_API_KEY']
         redirect_uri = KAKAO_CONFIG['KAKAO_REDIRECT_URI']
 
-        uri = f"{kakao_login_uri}?response_type=code&client_id={client_id}&redirect_uri={redirect_uri}&scope=profile_nickname,account_email"
+        uri = f"{KAKAO_LOGIN_URI}?response_type=code&client_id={client_id}&redirect_uri={redirect_uri}&scope=profile_nickname,account_email"
 
         res = redirect(uri)
         return res
@@ -115,8 +115,8 @@ class KaKaoUserView(APIView):
         if serializer.is_valid(raise_exception=True):
             user = serializer.save()
 
-            login_uri = f"{env('DOMAIN_ADDRESS')}/users/kakao/login/"
-            social_login_res = requests.post(login_uri, data={"email":f"{request_data['email']}","social_id":f"{request_data['social_id']}",})
+            login_url = f"{env('DOMAIN_ADDRESS')}/users/kakao/login/"
+            social_login_res = requests.post(login_url, data={"email":f"{request_data['email']}","social_id":f"{request_data['social_id']}",})
             return Response(social_login_res, status=status.HTTP_200_OK)
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -160,7 +160,7 @@ class KakaoCallbackView(APIView):
 
         token_headers = {"Content-type": "application/x-www-form-urlencoded;charset=utf-8"}
 
-        token_res = requests.post(kakao_token_uri, data=request_data, headers=token_headers)
+        token_res = requests.post(KAKAO_TOKEN_URI, data=request_data, headers=token_headers)
 
         token_json = token_res.json()
         access_token = token_json['access_token']
@@ -175,7 +175,7 @@ class KakaoCallbackView(APIView):
             "Authorization": access_token,
             "Content-type": "application/x-www-form-urlencoded;charset=utf-8",
         }
-        user_info_res = requests.get(kakao_profile_uri, headers=auth_headers)
+        user_info_res = requests.get(KAKAO_PROFILE_URI, headers=auth_headers)
         user_info_json = user_info_res.json()
 
 
@@ -207,16 +207,16 @@ class KakaoCallbackView(APIView):
 
         # db에 이메일 있는데 소셜 id가 있는 경우 후 로그인
         if (user_email in email_list) and (social_id in social_id_list):
-            login_uri = f"{env('DOMAIN_ADDRESS')}/users/kakao/login/"
-            social_login_res = requests.post(login_uri, data={"email":f"{user_email}","social_id":f"{social_id}",})
+            login_url = f"{env('DOMAIN_ADDRESS')}/users/kakao/login/"
+            social_login_res = requests.post(login_url, data={"email":f"{user_email}","social_id":f"{social_id}",})
             return Response(social_login_res, status=status.HTTP_200_OK)
 
         # db에 이메일이 있는 사용자라면 회원정보 업데이트 후 로그인 # request_body = {"email":user_email, "social_id":social_id,"email_verified":True or False}
         elif user_email in email_list:
             social_update_url = f"{env('DOMAIN_ADDRESS')}/users/kakao/user/"
             social_update_res = requests.put(social_update_url, data={"email":f"{user_email}","social_id":f"{social_id}","email_verified":f"{is_user_email_verifed}"})
-            login_uri = f"{env('DOMAIN_ADDRESS')}/users/kakao/login/"
-            social_login_res = requests.post(login_uri, data={"email":f"{user_email}","social_id":f"{social_id}",})
+            login_url = f"{env('DOMAIN_ADDRESS')}/users/kakao/login/"
+            social_login_res = requests.post(login_url, data={"email":f"{user_email}","social_id":f"{social_id}",})
             return Response(social_login_res, status=status.HTTP_200_OK)
 
         # db에 이메일이 없는 사용자라면 회원가입 -> 프론트에 user 정보 보내주기

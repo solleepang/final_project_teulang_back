@@ -176,6 +176,6 @@ KAKAO_CONFIG = {
     "KAKAO_CLIENT_SECRET_KEY": env('KAKAO_CLIENT_SECRET_KEY')
 }
 
-kakao_login_uri = "https://kauth.kakao.com/oauth/authorize"
-kakao_token_uri = "https://kauth.kakao.com/oauth/token"
-kakao_profile_uri = "https://kapi.kakao.com/v2/user/me"
+KAKAO_LOGIN_URI = "https://kauth.kakao.com/oauth/authorize"
+KAKAO_TOKEN_URI = "https://kauth.kakao.com/oauth/token"
+KAKAO_PROFILE_URI = "https://kapi.kakao.com/v2/user/me"
