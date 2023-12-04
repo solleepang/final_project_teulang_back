@@ -976,7 +976,12 @@ class ArticleFreeView(APIView):
     def get(self, request):
         """자유게시판 전체 게시글+이미지+댓글 조회"""
         page = request.GET.get("page", 1) if request.GET.get("page", 1) else 1
-        free_article = ArticlesFree.objects.all()
+        free_article = ArticlesFree.objects.all().order_by("-created_at")
+        category = request.GET.get("category")
+        if category == "chat":
+            free_article = free_article.filter(category="chat")
+        elif category == "review":
+            free_article = free_article.filter(category="review")
         all_free_paginator = Paginator(free_article, 20)
         paginator_data = {
             "filtered_recipes_count": all_free_paginator.count,  # 검색된 레시피 개수
