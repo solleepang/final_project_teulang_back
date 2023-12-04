@@ -46,7 +46,6 @@ import re
 from pytube import YouTube
 from moviepy.editor import *
 import openai
-from dotenv import load_dotenv
 from youtube_transcript_api import YouTubeTranscriptApi, TranscriptsDisabled
 
 class RecipeView(APIView):
@@ -1031,7 +1030,7 @@ class CommentFreeView(APIView):
 class YoutubeSummary(APIView):
     def __init__(self):
         super().__init__()
-        load_dotenv()
+        openai_api_key = os.environ.get("OPENAI_API_KEY")
 
     def extract_youtube_video_id(self, url: str) -> str | None:
         found = re.search(r"(?:youtu\.be\/|watch\?v=)([\w-]+)", url)
