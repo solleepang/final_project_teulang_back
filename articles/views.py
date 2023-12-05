@@ -1174,7 +1174,8 @@ class YoutubeSummary(APIView):
                 {"role": "user", "content": f"{transcript}"},
             ],
             model=model_name,
-            max_tokens=500, 
+            temperature=0.5,
+            max_tokens=350, 
         )
         
 
