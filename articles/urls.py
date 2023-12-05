@@ -83,4 +83,9 @@ urlpatterns = [
         views.DetectObjectsAPI.as_view(),
         name="detect_objects_api",
     ),
+    path(
+        "youtube/",
+        views.YoutubeSummary.as_view(),
+        name="youtube_summary",
+    ),
 ]

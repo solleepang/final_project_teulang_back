@@ -40,8 +40,14 @@ import tempfile
 import os
 from django.conf import settings
 from datetime import datetime
+import re
+from pytube import YouTube
+from moviepy.editor import *
+
+from youtube_transcript_api import YouTubeTranscriptApi, TranscriptsDisabled
 
 from openai import OpenAI
+# import openai
 
 
 class RecipeView(APIView):
@@ -939,3 +945,62 @@ class CommentFreeView(APIView):
             return Response("댓글이 삭제되었습니다", status=status.HTTP_204_NO_CONTENT)
         else:
             return Response("권한이 없습니다", status=status.HTTP_403_FORBIDDEN)
+
+
+
+class YoutubeSummary(APIView):
+    def __init__(self):
+        super().__init__()
+        self.openai_api_key = os.environ.get("OPENAI_API_KEY")
+        self.client = OpenAI(
+            api_key=f"{self.openai_api_key}",
+        )
+    def extract_youtube_video_id(self, url: str) -> str | None:
+        found = re.search(r"(?:youtu\.be/|watch\?v=)([\w-]+)", url)
+        return found.group(1) if found else None
+
+    def get_video_transcript(self, video_id: str, language: str = "ko") -> str | None:
+        try:
+            transcript = YouTubeTranscriptApi.get_transcript(video_id, languages=[language])
+            text = " ".join([line["text"] for line in transcript])
+            return text
+        except TranscriptsDisabled:
+            return None
+
+    def summarize_video(self, transcript):
+        model_name = 'gpt-3.5-turbo'
+
+        response = self.client.chat.completions.create(
+            messages=[
+                {"role": "system", "content": "한국어로 레시피 영상을 요약해주세요"},
+                {"role": "user", "content": f"{transcript}"},
+            ],
+            model=model_name,
+            # temperature=0.5,
+            max_tokens=350, 
+        )
+        
+
+        summary = response.choices[0].message.content.strip()
+
+        return summary
+
+    def post(self, request, *args, **kwargs):
+        youtube_url = request.data.get("url")
+
+        if not youtube_url:
+            return Response({"error": "youtube_url is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        video_id = self.extract_youtube_video_id(youtube_url)
+        
+        if not video_id:
+            return Response({"error": "Invalid YouTube URL"}, status=status.HTTP_400_BAD_REQUEST)
+
+        transcript = self.get_video_transcript(video_id)
+
+        if not transcript:
+            return Response({"error": "Transcript not available"}, status=status.HTTP_400_BAD_REQUEST)
+
+        summary = self.summarize_video(transcript)
+
+        return Response({"summary": summary}, status=status.HTTP_200_OK)
