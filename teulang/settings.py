@@ -105,6 +105,9 @@ AUTH_PASSWORD_VALIDATORS = [
     {
         "NAME": "django.contrib.auth.password_validation.NumericPasswordValidator",
     },
+    {
+        "NAME": "users.validators.CustomPasswordValidator",
+    },
 ]
 
 
@@ -147,6 +150,7 @@ SIMPLE_JWT = {
     "ROTATE_REFRESH_TOKENS": False,
     "BLACKLIST_AFTER_ROTATION": False,
     "UPDATE_LAST_LOGIN": False,
+    'USER_AUTHENTICATION_RULE': 'rest_framework_simplejwt.authentication.default_user_authentication_rule',
 }
 
 
@@ -162,4 +166,16 @@ EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD')
 EMAIL_USE_TLS = True
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER # 응답 메일 관련 설정
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
-URL_FRONT = 'https://teulang.net'
+URL_FRONT = env('URL_FRONT') # 'https://teulang.net'
+
+DOMAIN_ADDRESS = env('DOMAIN_ADDRESS')
+
+KAKAO_CONFIG = {
+    "KAKAO_REST_API_KEY": env('KAKAO_REST_API_KEY'),
+    "KAKAO_REDIRECT_URI": f"{DOMAIN_ADDRESS}/oauth/kakao/login/callback/",
+    "KAKAO_CLIENT_SECRET_KEY": env('KAKAO_CLIENT_SECRET_KEY')
+}
+
+KAKAO_LOGIN_URI = "https://kauth.kakao.com/oauth/authorize"
+KAKAO_TOKEN_URI = "https://kauth.kakao.com/oauth/token"
+KAKAO_PROFILE_URI = "https://kapi.kakao.com/v2/user/me"

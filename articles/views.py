@@ -45,8 +45,12 @@ from datetime import datetime
 import re
 from pytube import YouTube
 from moviepy.editor import *
-import openai
+
 from youtube_transcript_api import YouTubeTranscriptApi, TranscriptsDisabled
+
+from openai import OpenAI
+# import openai
+
 
 class RecipeView(APIView):
     # 레시피 불러오기(전체, 정렬(인기순/최신순))
@@ -72,7 +76,10 @@ class RecipeView(APIView):
             "pages_num": all_recipes_paginator.num_pages,  # 총 페이지 수
         }
         serializer = RecipeSerializer(page_obj, many=True)
-        return Response({"pagenation_data": paginator_data, "serializer_data": serializer.data}, status=status.HTTP_200_OK)
+        return Response(
+            {"pagenation_data": paginator_data, "serializer_data": serializer.data},
+            status=status.HTTP_200_OK,
+        )
 
     # 레시피, 재료, 순서 생성
     def post(self, request):
@@ -363,7 +370,9 @@ class StarRateView(APIView):
     def post(self, request, article_recipe_id):
         """요청 유저 아이디로 해당 레시피에 별점 추가"""
         if not request.user.is_email_verified:
-            return Response({"message": "이메일 인증이 필요합니다."}, status=status.HTTP_403_FORBIDDEN)
+            return Response(
+                {"message": "이메일 인증이 필요합니다."}, status=status.HTTP_403_FORBIDDEN
+            )
         # 로그인 정보 확인
         try:
             user = User.objects.get(id=request.user.id)
@@ -559,10 +568,10 @@ def fetch_and_save_openapi_data(request, start, end):
         )  # 권한 설정 추가 (관리자로 로그인한 access token값으로 확인합니다.)
 
     # api키 받기
-    api_key = env("API_KEY")
+    fetch_api_key = env("API_KEY")
 
     # API URL 입력 (맨뒤 1124 입력후 urls.py의 경로로 get 요청시 레시피를 가져옵니다.)
-    url = f"http://openapi.foodsafetykorea.go.kr/api/{api_key}/COOKRCP01/json/{start}/{end}"
+    url = f"http://openapi.foodsafetykorea.go.kr/api/{fetch_api_key}/COOKRCP01/json/{start}/{end}"
     response = requests.get(url)
 
     if response.status_code == 200:
@@ -601,9 +610,114 @@ def fetch_and_save_openapi_data(request, start, end):
                         order=i,
                     )
 
+            # OpenAI API request for summarization
+            title = recipe_data["RCP_NM"]
+            ingredients = "\n".join(
+                [
+                    ingredient["ingredients"]
+                    for ingredient in article_recipe.recipe_ingredients.all().values()
+                ]
+            )
+            content = "\n".join(
+                [
+                    order["content"]
+                    for order in article_recipe.recipe_order.all().values()
+                ]
+            )
+
+            openai_api_key = os.environ.get("OPENAI_API_KEY")
+            client = OpenAI(
+                api_key=f"{openai_api_key}",
+            )
+            # OpenAI API 호출
+            response = client.chat.completions.create(
+                messages=[
+                    {
+                        "role": "user",
+                        "content": f"({title}\n{ingredients}\n{content}) 이 레시피를 한문장으로 간단하고 눈에띄고 멋지게 50자 이내로 요약해줘",
+                    }
+                ],
+                model="gpt-3.5-turbo",
+                max_tokens=100,
+            )
+
+            # OpenAI 요약을 레시피의 description에 저장
+            summary = response.choices[0].message.content.strip()
+            article_recipe.description = summary
+            article_recipe.save()
+
         return JsonResponse({"message": "데이터 가져오기 및 저장 완료"})
     else:
         return JsonResponse({"error": "데이터 가져오기 실패"}, status=500)
+
+
+# @api_view(["GET"])
+# @permission_classes([IsAuthenticated])
+# def fetch_and_save_openapi_data(request, start, end):
+#     # 이전 코드 유지
+
+#     if response.status_code == 200:
+#         response_data = response.json()
+#         recipes = response_data["COOKRCP01"]["row"]
+
+#         for recipe_data in recipes:
+#             article_recipe = ArticleRecipe.objects.create(
+#                 author_id=1,
+#                 title=recipe_data["RCP_NM"],
+#                 api_recipe=True,
+#                 recipe_thumbnail_api=recipe_data["ATT_FILE_NO_MK"],
+#             )
+
+#             ingredients = recipe_data["RCP_PARTS_DTLS"].split(",")
+#             for ingredient in ingredients:
+#                 ArticleRecipeIngredients.objects.create(
+#                     article_recipe=article_recipe, ingredients=ingredient.strip()
+#                 )
+
+#             for i in range(1, 21):
+#                 order_key = f"MANUAL{i:02d}"
+#                 img_key = f"MANUAL_IMG{i:02d}"
+#                 content = recipe_data.get(order_key, "")[3:]
+#                 img_url = recipe_data.get(img_key, "")
+#                 if content:
+#                     RecipeOrder.objects.create(
+#                         article_recipe=article_recipe,
+#                         content=content,
+#                         recipe_img_api=img_url,
+#                         order=i,
+#                     )
+
+#             # OpenAI API request for summarization
+#             title = recipe_data["RCP_NM"]
+#             ingredients = "\n".join(
+#                 [
+#                     ingredient["ingredients"]
+#                     for ingredient in article_recipe.recipe_ingredients.all().values()
+#                 ]
+#             )
+#             content = "\n".join(
+#                 [
+#                     order["content"]
+#                     for order in article_recipe.recipe_order.all().values()
+#                 ]
+#             )
+
+#             openai_api_key = env("OPENAI_API_KEY")  # decouple을 통해 환경변수에서 API 키 가져오기
+#             openai.api_key = openai_api_key
+#             response = openai.Completion.create(
+#                 engine="text-davinci-003",
+#                 prompt=f"{title}\n{ingredients}\n{content}",
+#                 max_tokens=100,
+#             )
+#             summary = response.choices[0].text.strip()
+
+#             # Save the OpenAI summary into the recipe's description
+#             article_recipe.description = summary
+#             article_recipe.save()
+
+#         return JsonResponse({"message": "데이터 가져오기 및 저장 완료"})
+#     else:
+#         return JsonResponse({"error": "데이터 가져오기 실패"}, status=500)
 
 
 # class DetectObjectsAPI(APIView):
@@ -674,7 +788,7 @@ class DetectObjectsAPI(APIView):
         # 클래스 이름 얻기
         class_names = results.names
 
-        # 중복 제거된 감지된 클래스 얻기
+        # 중복 제거된 클래스 얻기
         detected_classes_set = set([class_names[int(r)] for r in results.boxes.cls])
         detected_classes = list(detected_classes_set)
 
@@ -686,7 +800,7 @@ class DetectObjectsAPI(APIView):
         current_time = datetime.now().strftime("%Y%m%d%H%M%S")
         output_image_path = os.path.join(output_directory, f"output_{current_time}.png")
 
-        # 경계 상자와 주석이 추가된 이미지를 그려서 저장
+        # 박스와 주석이 추가된 이미지를 그려서 저장
         result_plotted = results.plot(line_width=1)
         cv.imwrite(output_image_path, result_plotted)
 
@@ -868,7 +982,12 @@ class ArticleFreeView(APIView):
     def get(self, request):
         """자유게시판 전체 게시글+이미지+댓글 조회"""
         page = request.GET.get("page", 1) if request.GET.get("page", 1) else 1
-        free_article = ArticlesFree.objects.all()
+        free_article = ArticlesFree.objects.all().order_by("-created_at")
+        category = request.GET.get("category")
+        if category == "chat":
+            free_article = free_article.filter(category="chat")
+        elif category == "review":
+            free_article = free_article.filter(category="review")
         all_free_paginator = Paginator(free_article, 20)
         paginator_data = {
             "filtered_recipes_count": all_free_paginator.count,  # 검색된 레시피 개수
@@ -1030,13 +1149,14 @@ class CommentFreeView(APIView):
 class YoutubeSummary(APIView):
     def __init__(self):
         super().__init__()
-        openai_api_key = os.environ.get("OPENAI_API_KEY")
-
+        self.openai_api_key = os.environ.get("OPENAI_API_KEY")
+        self.client = OpenAI(
+            api_key=f"{self.openai_api_key}",
+        )
     def extract_youtube_video_id(self, url: str) -> str | None:
-        found = re.search(r"(?:youtu\.be\/|watch\?v=)([\w-]+)", url)
-        if found:
-            return found.group(1)
-        return None
+        found = re.search(r"(?:youtu\.be/|watch\?v=)([\w-]+)", url)
+        return found.group(1) if found else None
+
     def get_video_transcript(self, video_id: str, language: str = "ko") -> str | None:
         try:
             transcript = YouTubeTranscriptApi.get_transcript(video_id, languages=[language])
@@ -1045,51 +1165,39 @@ class YoutubeSummary(APIView):
         except TranscriptsDisabled:
             return None
 
+    def summarize_video(self, transcript):
+        model_name = 'gpt-3.5-turbo'
 
-
-    def generate_summary(self, text: str) -> str:
-        openai.api_key = os.getenv("OPENAI_API_KEY")
-
-        instructions = "영상의 요리방법만 요약해주세요"
-        response = openai.Completion.create(
-            engine="text-davinci-003",
-            prompt=f"{instructions}\n\n{text[:1000]}",  # Truncate the prompt
-            temperature=0.7,
-            max_tokens=800,  # 글자수
-            top_p=1.0,
-            frequency_penalty=0.0,
-            presence_penalty=0.0,
-            stop=None
+        response = self.client.chat.completions.create(
+            messages=[
+                {"role": "system", "content": "한국어로 레시피 영상을 요약해주세요"},
+                {"role": "user", "content": f"{transcript}"},
+            ],
+            model=model_name,
+            max_tokens=500, 
         )
-        return response.choices[0].text.strip()
+        
 
-    def summarize_youtube_video(self, video_url: str) -> str:
-        video_id = self.extract_youtube_video_id(video_url)
+        summary = response.choices[0].message.content.strip()
 
-        if not video_id:
-            return f"올바른 유튜브 url이 아닙니다. : {video_url}"
-
-        # Try to retrieve the Korean transcript
-        transcript = self.get_video_transcript(video_id, language="ko")
-
-        if transcript is None:
-            return f"한글 자막이 없는 영상입니다.: {video_url}"
-
-        summary = self.generate_summary(transcript)
         return summary
 
+    def post(self, request, *args, **kwargs):
+        youtube_url = request.data.get("url")
 
-    def post(self, request):
-        video_url = request.data.get("url", "")
-        if not video_url:
-            return Response(
-                {"message": "유튜브 url을 정확하게 입력해주세요"},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+        if not youtube_url:
+            return Response({"error": "youtube_url is required"}, status=status.HTTP_400_BAD_REQUEST)
 
-        result = self.summarize_youtube_video(video_url)
-        # return Response({"summary": result}, status=status.HTTP_200_OK)
-        if "올바른 유튜브 url이 아닙니다." in result or "한글 자막이 없는 영상입니다." in result:
-            return Response({"message": result}, status=status.HTTP_400_BAD_REQUEST)
-        else:
-            return Response({"summary": result}, status=status.HTTP_200_OK)
+        video_id = self.extract_youtube_video_id(youtube_url)
+        
+        if not video_id:
+            return Response({"error": "Invalid YouTube URL"}, status=status.HTTP_400_BAD_REQUEST)
+
+        transcript = self.get_video_transcript(video_id)
+
+        if not transcript:
+            return Response({"error": "Transcript not available"}, status=status.HTTP_400_BAD_REQUEST)
+
+        summary = self.summarize_video(transcript)
+
+        return Response({"summary": summary}, status=status.HTTP_200_OK)
