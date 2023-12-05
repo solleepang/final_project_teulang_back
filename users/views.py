@@ -119,13 +119,16 @@ class KaKaoUserView(APIView):
             login_url = f"{env('DOMAIN_ADDRESS')}/users/kakao/login/"
             social_login_res = requests.post(login_url, data={"email":f"{request_data['email']}","social_id":f"{request_data['social_id']}",})
             refresh = social_login_res.text.split(',')[1].split(':')[1][1:]
+            refresh = refresh[:-2]
             access = social_login_res.text.split(',')[2].split(':')[1][1:]
             access = access[:-2]
 
-            token_url = f"{URL_FRONT}/?refresh={refresh}&access={access}"
+            return Response({
+                'status': True,
+                'refresh': str(refresh),
+                'access': str(access),
+            }, status=status.HTTP_200_OK)
 
-            res = redirect(token_url)
-            return res
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -220,6 +223,7 @@ class KakaoCallbackView(APIView):
 
             # 로그인해서 refresh, access token 발급
             refresh = social_login_res.text.split(',')[1].split(':')[1][1:]
+            refresh = refresh[:-2]
             access = social_login_res.text.split(',')[2].split(':')[1][1:]
             access = access[:-2]
 
@@ -237,6 +241,7 @@ class KakaoCallbackView(APIView):
             login_url = f"{env('DOMAIN_ADDRESS')}/users/kakao/login/"
             social_login_res = requests.post(login_url, data={"email":f"{user_email}","social_id":f"{social_id}",})
             refresh = social_login_res.text.split(',')[1].split(':')[1][1:]
+            refresh = refresh[:-2]
             access = social_login_res.text.split(',')[2].split(':')[1][1:]
             access = access[:-2]
 
