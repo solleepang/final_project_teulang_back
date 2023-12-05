@@ -14,6 +14,29 @@ from django.contrib.auth.hashers import check_password
 from rest_framework.exceptions import AuthenticationFailed, NotFound
 from users.validators import contains_special_character, contains_uppercase_letter, contains_lowercase_letter, contains_number
 
+class KakaoSignupSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(write_only=True, required=True)
+
+    class Meta(object):
+        model = User
+        fields = ('social_id', 'email','nickname','password') # ,'is_email_verified'
+        extra_kwargs = {
+            "password": {'write_only': True},
+            "error_messages": {
+                "blank":"닉네임을 입력해주세요.",
+                "max_length":"닉네임은 최대 30자까지 입력 가능합니다.",
+                "unique":"고유한 값을 입력해주세요.",
+                "required":"필수 항목입니다."
+            }
+        }
+
+    def create(self, validated_data):
+        user = super().create(validated_data)
+        user.set_password(user.password)
+        user.is_email_verified=True
+        user.save()
+        return user
+
 class ResetPasswordSerializer(serializers.ModelSerializer):
     new_password = serializers.CharField(write_only=True, required=True)
     new_password_check = serializers.CharField(
@@ -84,8 +107,16 @@ class UserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ("email", "nickname", "password", "password_check","following")
-        extra_kwargs = {'password': {'write_only': True}}
+        fields = ("email", "nickname", "password", "password_check","following","social_id" )
+        # extra_kwargs = {'password': {'write_only': True}}
+        extra_kwargs = {
+            'password': {'write_only': True},
+            "error_messages": {
+                "blank":"닉네임을 입력해주세요.",
+                "max_length":"닉네임은 최대 30자까지 입력 가능합니다.",
+                "unique":"고유한 값을 입력해주세요."
+            }
+        }
 
     # 비밀번호 유효성 검사와 비밀번호와 확인 비밀번호 일치 확인
     def validate(self, attrs):
@@ -97,12 +128,6 @@ class UserSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({'password': err.messages})
         if password != password_check:
             raise ValidationError("비밀번호와 확인 비밀번호가 일치하지 않습니다. 다시 입력해주세요.")
-        # 8
-        if (len(password) < 8
-            or not (contains_uppercase_letter(password) or contains_lowercase_letter(password))
-            or not contains_number(password)
-            or not contains_special_character(password)):
-            raise serializers.ValidationError("비밀번호는 8자 이상, 문자, 숫자, 특수문자 조합이어야 합니다.") # 400 non_field_errors
         return attrs
 
     def create(self, validated_data):
@@ -193,7 +218,7 @@ class UserInfoSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ("email", "user_img", "articles_recipe",
-                  "nickname", "following", "bookmarked_articles","followers","is_admin","is_email_verified")
+                  "nickname", "following", "bookmarked_articles","followers","is_admin","is_email_verified","social_id")
         # fields = "__all__"
 
 
@@ -208,7 +233,7 @@ class ProfileUpdateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['email','nickname', 'password', 'user_img']
+        fields = ['email','nickname', 'password', 'user_img', 'social_id']
         
     # 비밀번호 유효성검사입니다.
     def validate_password(self, value):
@@ -216,13 +241,6 @@ class ProfileUpdateSerializer(serializers.ModelSerializer):
             validate_password(value)
         except ValidationError as e:
             raise serializers.ValidationError(e.messages)
-
-        # Additional password complexity checks
-        if (len(value) < 8
-            or not (contains_uppercase_letter(value) or contains_lowercase_letter(value))
-            or not contains_number(value)
-            or not contains_special_character(value)):
-            raise serializers.ValidationError("비밀번호는 8자 이상, 문자, 숫자, 특수문자 조합이어야 합니다.") # 400 non_field_errors
 
         return value
 
