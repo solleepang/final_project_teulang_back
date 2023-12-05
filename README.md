@@ -39,6 +39,10 @@
 $ git clone (깃헙 주소)
 # cd final_project_teulang_back
 ```
+### mac 사용자 일 경우 
+로컬에 ffmpeg를 설치해야합니다.
+1. cmd 파일 실행
+2. brew install ffmpeg 입력 (brew 기능이 사용 가능 한 경우)
 
 ## 기술 스택
 #### Environment
