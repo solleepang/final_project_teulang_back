@@ -352,13 +352,14 @@ class EmailPasswordVerificationView(APIView):
             request_code = request.data['code']
 
             # 사용자에게 보내진 이메일 인증 코드
-            verification_code = VerificationCode.objects.filter(user=request_user.id).order_by('-created_at').first()
-            if not verification_code:
+            verification = VerificationCode.objects.filter(user=request_user.id).order_by('-created_at')
+            if not verification[0]:
                 raise Exception("인증코드가 존재하지 않습니다.")
 
             # 이메일 인증 유효기간과 인증코드의 생성된 기간
             expiration_period = 3
-            generated_period = timezone.now() - verification_code
+            generated_period = timezone.now() - verification[0].created_at
+            verification_code = verification[0].code
 
             # DB에 저장된 인증 코드와 유저가 입력한 코드의 일치 여부와 유효기간이 지났는지 확인
             if verification_code == request_code:
