@@ -219,7 +219,7 @@ class UserInfoSerializer(serializers.ModelSerializer):
         model = User
         fields = ("email", "user_img", "articles_recipe",
                   "nickname", "following", "bookmarked_articles","followers","is_admin","is_email_verified","social_id")
-        # fields = "__all__"
+
 
 
 # 회원 수정을 위한 클래스입니다.
@@ -266,54 +266,3 @@ class UserDataSerializer(serializers.ModelSerializer):
         model = User
         fields = ("id", "email", "user_img", "nickname", "following")
         
-        
-        
-# class ProfileUpdateSerializer(serializers.ModelSerializer):
-#     nickname = serializers.CharField(required=False)
-#     password = serializers.CharField(write_only=True, required=False)
-#     user_img = serializers.ImageField(required=False)
-#     email = serializers.EmailField(read_only=True)  
-#     extra_kwargs = {
-#         'password': {'write_only': True}
-#     }
-
-#     class Meta:
-#         model = User
-#         fields = ['email','nickname', 'password', 'user_img']
-        
-#     # 비밀번호 유효성검사입니다.
-#     def validate_password(self, value):
-#         try:
-#             validate_password(value)
-#         except ValidationError as e:
-#             raise serializers.ValidationError(e.messages)
-
-#         # Additional password complexity checks
-#         if (len(value) < 8
-#             or not (contains_uppercase_letter(value) or contains_lowercase_letter(value))
-#             or not contains_number(value)
-#             or not contains_special_character(value)):
-#             raise serializers.ValidationError("비밀번호는 8자 이상, 문자, 숫자, 특수문자 조합이어야 합니다.") # 400 non_field_errors
-
-#         return value
-
-#     def update(self, instance, validated_data):
-#         """회원 수정을 위한 메서드입니다."""
-#         password = validated_data.pop("password", None)
-#         user_img = validated_data.pop("user_img", None)
-#         nickname = validated_data.pop("nickname", None)
-
-#         # 비밀번호 유효성 검사
-#         if password is not None:
-#             password = self.validate_password(password)
-
-#         if user_img is not None:
-#             instance.user_img = user_img
-
-#         if nickname is not None:
-#             if User.objects.filter(nickname=nickname).exclude(id=instance.id).exists():
-#                 raise serializers.ValidationError({'nickname': '이미 사용중인 닉네임입니다.'})
-#             instance.nickname = nickname
-
-#         instance.save()
-#         return instance
