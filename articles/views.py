@@ -19,9 +19,7 @@ from articles.models import (
 from articles.serializers import (
     RecipeSerializer,
     RecipeCreateSerializer,
-    OrderSerializer,
     OrderCreateSerializer,
-    IngredientSerializer,
     IngredientCreateSerializer,
     StarRateSerializer,
     RecipeBookmarkSerializer,
@@ -280,84 +278,6 @@ class RecipeDetailView(APIView):
             return Response("삭제되었습니다", status=status.HTTP_204_NO_CONTENT)
         else:
             return Response("권한이 없습니다", status=status.HTTP_403_FORBIDDEN)
-
-
-# class OrderView(APIView):
-#     # 각 레시피의 조리 순서 전부 가져오기
-#     def get(self, request, article_recipe_id):
-#         recipe = ArticleRecipe.objects.get(id=article_recipe_id)
-#         recipe_orders = recipe.recipe_order.all()  # order_set -> recipe_order
-#         serializer = OrderSerializer(recipe_orders, many=True)
-#         return Response(serializer.data, status=status.HTTP_200_OK)
-
-
-# class OrderDetailView(APIView):
-#     # 각 레시피의 조리순서 수정하기 (하나씩 각각)
-#     def put(self, request, article_recipe_id, recipe_order_id):
-#         recipe = get_object_or_404(ArticleRecipe, id=article_recipe_id)
-#         # recipe_order = get_object_or_404(RecipeOrder, id=recipe_order_id) ==> 식재료와 마찬가지로 오류 수정
-#         recipe_order = recipe.recipe_order.get(id=recipe_order_id)
-#         if request.user == recipe.author:  # 해당 레시피 작성자가 아니면 수정 안되게 설정
-#             serializer = OrderCreateSerializer(recipe_order, data=request.data)
-#             if serializer.is_valid():
-#                 serializer.save()
-#                 return Response(serializer.data, status=status.HTTP_200_OK)
-#             else:
-#                 return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-#         else:
-#             return Response("권한이 없습니다", status=status.HTTP_403_FORBIDDEN)
-
-#     # 각 레시피의 조리순서 삭제하기 (하나씩 각각)
-#     def delete(self, request, article_recipe_id, recipe_order_id):
-#         recipe = get_object_or_404(ArticleRecipe, id=article_recipe_id)
-#         recipe_order = recipe.recipe_order.get(id=recipe_order_id)
-#         if request.user == recipe.author:  # 해당 레시피 작성자가 아니면 삭제 안되게 설정
-#             recipe_order.delete()
-#             return Response("삭제되었습니다", status=status.HTTP_204_NO_CONTENT)
-#         else:
-#             return Response("권한이 없습니다", status=status.HTTP_403_FORBIDDEN)
-
-
-# class IngredientView(APIView):
-#     # 각 레시피의 재료 전부 가져오기
-#     def get(self, request, article_recipe_id):
-#         recipe = ArticleRecipe.objects.get(id=article_recipe_id)
-#         recipe_ingredients = recipe.recipe_ingredients.all()
-#         serializer = IngredientSerializer(recipe_ingredients, many=True)
-#         return Response(serializer.data, status=status.HTTP_200_OK)
-
-
-# class IngredientDetailView(APIView):
-#     # 각 레시피의 재료 수정하기 (하나씩 각각)
-#     def put(self, request, article_recipe_id, article_recipe_ingredients_id):
-#         recipe = get_object_or_404(ArticleRecipe, id=article_recipe_id)
-#         # url에서 받아온 recipe_id값과 동일한 recipe 내에서 역참조한 식재료 목록 중 ingredients_id와 같은 값을 갖는 식재료 목록을 하나씩 가져옵니다.
-#         recipe_ingredients = recipe.recipe_ingredients.get(
-#             id=article_recipe_ingredients_id
-#         )
-#         if request.user == recipe.author:  # 해당 레시피 작성자가 아니면 수정 안되게 설정
-#             serializer = IngredientCreateSerializer(
-#                 recipe_ingredients, data=request.data
-#             )
-#             if serializer.is_valid():
-#                 serializer.save()
-#                 return Response(serializer.data, status=status.HTTP_200_OK)
-#             else:
-#                 return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-#         else:
-#             return Response("권한이 없습니다", status=status.HTTP_403_FORBIDDEN)
-
-#     # 각 레시피의 재료 삭제하기 (하나씩 각각)
-#     def delete(self, request, article_recipe_id, article_recipe_ingredients_id):
-#         recipe = get_object_or_404(ArticleRecipe, id=article_recipe_id)
-#         recipe_ingredients = recipe.recipe_ingredients.get(
-#             id=article_recipe_ingredients_id
-#         )
-#         if request.user == recipe.author:  # 해당 레시피 작성자가 아니면 삭제 안되게 설정
-#             recipe_ingredients.delete()
-#             return Response("삭제되었습니다", status=status.HTTP_204_NO_CONTENT)
-#         else:
-#             return Response("권한이 없습니다", status=status.HTTP_403_FORBIDDEN)
 
 
 class StarRateView(APIView):
@@ -643,124 +563,6 @@ def fetch_and_save_openapi_data(request, start, end):
         return JsonResponse({"message": "데이터 가져오기 및 저장 완료"})
     else:
         return JsonResponse({"error": "데이터 가져오기 실패"}, status=500)
-
-
-# @api_view(["GET"])
-# @permission_classes([IsAuthenticated])
-# def fetch_and_save_openapi_data(request, start, end):
-#     # 이전 코드 유지
-
-#     if response.status_code == 200:
-#         response_data = response.json()
-#         recipes = response_data["COOKRCP01"]["row"]
-
-#         for recipe_data in recipes:
-#             article_recipe = ArticleRecipe.objects.create(
-#                 author_id=1,
-#                 title=recipe_data["RCP_NM"],
-#                 api_recipe=True,
-#                 recipe_thumbnail_api=recipe_data["ATT_FILE_NO_MK"],
-#             )
-
-#             ingredients = recipe_data["RCP_PARTS_DTLS"].split(",")
-#             for ingredient in ingredients:
-#                 ArticleRecipeIngredients.objects.create(
-#                     article_recipe=article_recipe, ingredients=ingredient.strip()
-#                 )
-
-#             for i in range(1, 21):
-#                 order_key = f"MANUAL{i:02d}"
-#                 img_key = f"MANUAL_IMG{i:02d}"
-#                 content = recipe_data.get(order_key, "")[3:]
-#                 img_url = recipe_data.get(img_key, "")
-#                 if content:
-#                     RecipeOrder.objects.create(
-#                         article_recipe=article_recipe,
-#                         content=content,
-#                         recipe_img_api=img_url,
-#                         order=i,
-#                     )
-
-#             # OpenAI API request for summarization
-#             title = recipe_data["RCP_NM"]
-#             ingredients = "\n".join(
-#                 [
-#                     ingredient["ingredients"]
-#                     for ingredient in article_recipe.recipe_ingredients.all().values()
-#                 ]
-#             )
-#             content = "\n".join(
-#                 [
-#                     order["content"]
-#                     for order in article_recipe.recipe_order.all().values()
-#                 ]
-#             )
-
-#             openai_api_key = env("OPENAI_API_KEY")  # decouple을 통해 환경변수에서 API 키 가져오기
-#             openai.api_key = openai_api_key
-#             response = openai.Completion.create(
-#                 engine="text-davinci-003",
-#                 prompt=f"{title}\n{ingredients}\n{content}",
-#                 max_tokens=100,
-#             )
-#             summary = response.choices[0].text.strip()
-
-#             # Save the OpenAI summary into the recipe's description
-#             article_recipe.description = summary
-#             article_recipe.save()
-
-#         return JsonResponse({"message": "데이터 가져오기 및 저장 완료"})
-#     else:
-#         return JsonResponse({"error": "데이터 가져오기 실패"}, status=500)
-
-
-# class DetectObjectsAPI(APIView):
-#     def post(self, request, *args, **kwargs):
-#         # YOLO 모델 불러오기
-#         model = YOLO("best.pt")
-
-#         # POST 요청으로부터 이미지 파일 얻기
-#         image = request.FILES.get("image")
-
-#         # 입력 이미지를 임시 파일로 저장
-#         input_image_path = os.path.join(settings.MEDIA_ROOT, "temp_input_image.jpg")
-#         with open(input_image_path, "wb") as destination:
-#             for chunk in image.chunks():
-#                 destination.write(chunk)
-
-#         # YOLO 모델을 사용하여 객체 감지 수행
-#         results = model.predict(source=input_image_path, device="cpu")[0]
-
-#         # 클래스 이름 얻기
-#         class_names = results.names
-
-#         # 중복 제거된 감지된 클래스 얻기
-#         detected_classes_set = set([class_names[int(r)] for r in results.boxes.cls])
-#         detected_classes = list(detected_classes_set)
-
-#         # 출력 이미지를 저장할 디렉토리 생성
-#         output_directory = os.path.join(settings.MEDIA_ROOT, "detected_images")
-#         os.makedirs(output_directory, exist_ok=True)
-
-#         # 출력 이미지의 랜덤 파일명 생성
-#         output_image_path = os.path.join(
-#             output_directory, f"output_{hash(input_image_path)}.png"
-#         )
-
-#         # 경계 상자와 주석이 추가된 이미지를 그려서 저장
-#         result_plotted = results.plot(line_width=1)
-#         cv.imwrite(output_image_path, result_plotted)
-
-#         # 임시 입력 이미지 파일 삭제
-#         os.remove(input_image_path)
-
-#         # Response 데이터 구성
-#         response_data = {
-#             "detected_classes": detected_classes,
-#             "output_image_path": output_image_path,
-#         }
-
-#         return Response(response_data)
 
 
 class DetectObjectsAPI(APIView):
