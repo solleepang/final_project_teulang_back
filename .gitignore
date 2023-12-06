@@ -1,6 +1,9 @@
 # Created by https://www.toptal.com/developers/gitignore/api/visualstudiocode,windows,macos,python,django
 # Edit at https://www.toptal.com/developers/gitignore?templates=visualstudiocode,windows,macos,python,django
 
+# environment variable
+.env
+
 ### Django ###
 *.log
 *.pot
@@ -10,6 +13,9 @@ local_settings.py
 db.sqlite3
 db.sqlite3-journal
 media
+
+### Formatter ###
+.vscode
 
 # If your build process includes running collectstatic, then you probably don't need or want to include staticfiles/
 # in your Git repository. Update and uncomment the following line accordingly.
@@ -342,3 +348,18 @@ $RECYCLE.BIN/
 *.lnk
 
 # End of https://www.toptal.com/developers/gitignore/api/visualstudiocode,windows,macos,python,django
+articles/migrations/0001_initial.py
+articles/migrations/0002_alter_articlerecipe_api_recipe.py
+articles/migrations/0003_alter_articlerecipe_api_recipe.py
+articles/migrations/0004_alter_articlerecipe_api_recipe.py
+articles/migrations/0005_rename_user_articlerecipe_author.py
+articles/migrations/0006_articlerecipe_description.py
+users/migrations/0001_initial.py
+users/migrations/0002_alter_user_managers.py
+articles/migrations/0007_rename_article_recipe_img_articlerecipe_recipe_thumbnail_and_more.py
+articles/migrations/0008_remove_articlerecipe_ingredients_and_more.py
+articles/migrations/0009_alter_starrate_article_recipe_id_and_more.py
+users/migrations/0003_user_point_alter_user_email.py
+users/migrations/0004_user_is_email_verified_verificationcode.py
+articles/migrations/0010_articlerecipe_recipe_thumbnail_api_and_more.py
+my_frige/migrations/
