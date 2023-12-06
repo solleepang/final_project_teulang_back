@@ -48,6 +48,7 @@ from youtube_transcript_api import YouTubeTranscriptApi, TranscriptsDisabled
 
 from openai import OpenAI
 # import openai
+import json
 
 
 class RecipeView(APIView):
@@ -118,7 +119,7 @@ class RecipeView(APIView):
         # 조리 순서와 이미지 저장
         orders = request.data.get("recipe_order")
         if orders:
-            orders = eval(orders)
+            orders = json.loads(orders.replace("'", "\""))
             for i in range(1, len(orders) + 1):
                 recipe_img = request.data.get(f"{i}")
                 order_image_data = {
@@ -180,7 +181,7 @@ class RecipeDetailView(APIView):
             # 재료 수정
             ingredients_data = request.data.get("recipe_ingredients")
             if ingredients_data:
-                ingredients_data = eval(ingredients_data)
+                ingredients_data = json.loads(ingredients_data.replace("None", "null").replace("'", "\""))
                 for ingredient_data in ingredients_data:
                     try:
                         ingredient = ArticleRecipeIngredients.objects.get(
@@ -215,7 +216,7 @@ class RecipeDetailView(APIView):
             # 순서 수정
             orders_data = request.data.get("recipe_order")
             if orders_data:
-                orders_data = eval(orders_data)
+                orders_data = json.loads(orders_data.replace("None", "null").replace("'", "\""))
                 for order_data in orders_data:
                     recipe_order_img = request.data.get(f'{order_data["order"]}')
                     order_data["recipe_img"] = (
@@ -250,11 +251,11 @@ class RecipeDetailView(APIView):
             # 재료 삭제
             delete_ingredients_data = request.data.get("delete_ingredients")
             if delete_ingredients_data:
-                delete_ingredients_data = eval(delete_ingredients_data)
+                delete_ingredients_data = delete_ingredients_data[1:-1].split(",")
                 for delete_ingredient in delete_ingredients_data:
                     ingredient = get_object_or_404(
                         ArticleRecipeIngredients,
-                        id=delete_ingredient,
+                        id=delete_ingredient.strip(),
                         article_recipe_id=recipe.id,
                     )
                     ingredient.delete()
@@ -263,10 +264,10 @@ class RecipeDetailView(APIView):
             # 순서 삭제
             delete_order_data = request.data.get("delete_order")
             if delete_order_data:
-                delete_order_data = eval(delete_order_data)
+                delete_order_data = delete_order_data[1:-1].split(",")
                 for delete_order in delete_order_data:
                     order = get_object_or_404(
-                        RecipeOrder, id=delete_order, article_recipe_id=recipe.id
+                        RecipeOrder, id=delete_order.strip(), article_recipe_id=recipe.id
                     )
                     order.delete()
             else:
@@ -440,16 +441,11 @@ class RecipeSearchView(APIView):
         # 검색 재료 포함하는 레시피 포함
         quart_string = request.GET.get("q", "")
         ingredients = quart_string.split(",")
-        recipes = []
-        for i in range(len(ingredients)):
-            if i < 1:
-                recipes = ArticleRecipe.objects.filter(
-                    recipe_ingredients__ingredients__contains=ingredients[i].strip()
-                ).distinct()
-            else:
-                recipes = recipes.filter(
-                    recipe_ingredients__ingredients__contains=ingredients[i].strip()
-                ).distinct()
+        recipes = ArticleRecipe.objects.all()
+        for i in ingredients:
+            recipes = recipes.filter(
+                recipe_ingredients__ingredients__contains=i.strip()
+            ).distinct()
         # 최신순/인기순 옵션과 페이지네이션
         page = request.GET.get("page", 1) if request.GET.get("page", 1) else 1
         option = request.GET.get("option")
@@ -622,168 +618,6 @@ class ArticleFreeView(APIView):
     def get(self, request):
         """자유게시판 전체 게시글+이미지+댓글 조회"""
         page = request.GET.get("page", 1) if request.GET.get("page", 1) else 1
-        free_article = ArticlesFree.objects.all()
-        all_free_paginator = Paginator(free_article, 20)
-        paginator_data = {
-            "filtered_recipes_count": all_free_paginator.count,  # 검색된 레시피 개수
-            "pages_num": all_free_paginator.num_pages,  # 총 페이지 수
-        }
-        if int(page) > all_free_paginator.num_pages:
-            return Response("요청한 페이지가 없습니다.", status=status.HTTP_404_NOT_FOUND)
-        page_obj = all_free_paginator.page(page)
-        serializer = FreeArticleSerializer(page_obj, many=True)
-        return Response(
-            {"pagenation_data": paginator_data, "serializer_data": serializer.data},
-            status=status.HTTP_200_OK,
-        )
-
-    def post(self, request):
-        """자유게시판 게시글 작성"""
-        if not request.user.is_authenticated:
-            return Response(
-                {"message": "로그인이 필요합니다."}, status=status.HTTP_401_UNAUTHORIZED
-            )
-        if not request.user.is_email_verified:
-            return Response(
-                {"message": "이메일 인증이 필요합니다."}, status=status.HTTP_403_FORBIDDEN
-            )
-
-        serializer = FreeArticleSerializer(
-            data=request.data, context={"request": request}
-        )
-        if serializer.is_valid():
-            serializer.save(author_id=request.user)
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        else:
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
-class ArticleFreeDetailView(APIView):
-    def get(self, request, article_free_id):
-        """자유게시판 특정 게시글+이미지+댓글 조회"""
-        free_article = get_object_or_404(ArticlesFree, id=article_free_id)
-        serializer = FreeArticleSerializer(free_article)
-        return Response(serializer.data, status=status.HTTP_200_OK)
-
-    def put(self, request, article_free_id):
-        """자유게시판 특정 게시글+이미지 수정"""
-        if not request.user.is_authenticated:
-            return Response("로그인 정보가 없습니다", status=status.HTTP_401_UNAUTHORIZED)
-
-        free_article = get_object_or_404(ArticlesFree, id=article_free_id)
-        if request.user == free_article.author_id:
-            # 게시글 수정
-            free_article_serializer = FreeArticleSerializer(
-                free_article, data=request.data
-            )
-            if free_article_serializer.is_valid():
-                free_article_serializer.save()
-            else:
-                return Response(
-                    free_article_serializer.errors, status=status.HTTP_400_BAD_REQUEST
-                )
-            # 이미지 추가
-            new_images = request.FILES
-            if new_images:
-                for image in new_images.getlist("image"):
-                    ArticleFreeImages.objects.create(
-                        article_free_id=free_article, free_image=image
-                    )
-            # 이미지 삭제
-            delete_images = request.data.get("delete_image")
-            error_text = []
-            if delete_images:
-                print(type(delete_images))
-                delete_images = eval(delete_images)
-                for delete_image in delete_images:
-                    try:
-                        delete_image_id = ArticleFreeImages.objects.get(
-                            id=delete_image, article_free_id=free_article
-                        )
-                    except ObjectDoesNotExist:
-                        error_text.append(
-                            f"delete_image_error: db에서 [id:{delete_image}] 이미지 정보를 찾지 못했습니다."
-                        )
-                    else:
-                        delete_image_id.delete()
-            return Response(
-                {
-                    "error_list": error_text,
-                    "serializer_data": free_article_serializer.data,
-                },
-                status=status.HTTP_200_OK,
-            )
-        else:
-            return Response("권한이 없습니다", status=status.HTTP_403_FORBIDDEN)
-
-    def delete(self, request, article_free_id):
-        """자유게시판 특정 게시글 삭제"""
-        if not request.user.is_authenticated:
-            return Response("로그인 정보가 없습니다", status=status.HTTP_401_UNAUTHORIZED)
-
-        free_article = get_object_or_404(ArticlesFree, id=article_free_id)
-        if request.user == free_article.author_id:
-            free_article.delete()
-            return Response("삭제되었습니다", status=status.HTTP_204_NO_CONTENT)
-        else:
-            return Response("권한이 없습니다", status=status.HTTP_403_FORBIDDEN)
-
-
-class CommentFreeView(APIView):
-    def post(self, request, article_free_id):
-        """자유게시판 댓글 작성"""
-        if not request.user.is_authenticated:
-            return Response(
-                {"message": "로그인이 필요합니다."}, status=status.HTTP_401_UNAUTHORIZED
-            )
-        if not request.user.is_email_verified:
-            return Response(
-                {"message": "이메일 인증이 필요합니다."}, status=status.HTTP_403_FORBIDDEN
-            )
-
-        free_article = get_object_or_404(ArticlesFree, id=article_free_id)
-        serializer = FreeCommentSerializer(data=request.data)
-        if serializer.is_valid():
-            serializer.save(author_id=request.user, article_free_id=free_article)
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        else:
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-    def put(self, request, article_free_id, free_comment_id):
-        """자유게시판 댓글 수정"""
-        if not request.user.is_authenticated:
-            return Response("로그인 정보가 없습니다", status=status.HTTP_401_UNAUTHORIZED)
-
-        free_article = get_object_or_404(ArticlesFree, id=article_free_id)
-        free_comment = free_article.article_free_comment.get(id=free_comment_id)
-        if request.user == free_comment.author_id:
-            serializer = FreeCommentSerializer(free_comment, data=request.data)
-            if serializer.is_valid():
-                serializer.save()
-                return Response(serializer.data, status=status.HTTP_200_OK)
-            else:
-                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        else:
-            return Response("권한이 없습니다", status=status.HTTP_403_FORBIDDEN)
-
-    def delete(self, request, article_free_id, free_comment_id):
-        """자유게시판 댓글 삭제"""
-        if not request.user.is_authenticated:
-            return Response("로그인 정보가 없습니다", status=status.HTTP_401_UNAUTHORIZED)
-
-        free_article = get_object_or_404(ArticlesFree, id=article_free_id)
-        free_comment = free_article.article_free_comment.get(id=free_comment_id)
-        if request.user == free_comment.author_id:
-            free_comment.delete()
-            return Response("댓글이 삭제되었습니다", status=status.HTTP_204_NO_CONTENT)
-        else:
-            return Response("권한이 없습니다", status=status.HTTP_403_FORBIDDEN)
-
-
-class ArticleFreeView(APIView):
-    def get(self, request):
-        """자유게시판 전체 게시글+이미지+댓글 조회"""
-        page = request.GET.get("page", 1) if request.GET.get("page", 1) else 1
         free_article = ArticlesFree.objects.all().order_by("-created_at")
         category = request.GET.get("category")
         if category == "chat":
@@ -860,12 +694,11 @@ class ArticleFreeDetailView(APIView):
             delete_images = request.data.get("delete_image")
             error_text = []
             if delete_images:
-                print(type(delete_images))
-                delete_images = eval(delete_images)
+                delete_images = delete_images[1:-1].split(",")
                 for delete_image in delete_images:
                     try:
                         delete_image_id = ArticleFreeImages.objects.get(
-                            id=delete_image, article_free_id=free_article
+                            id=delete_image.strip(), article_free_id=free_article
                         )
                     except ObjectDoesNotExist:
                         error_text.append(
