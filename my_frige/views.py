@@ -7,6 +7,7 @@ from teulang.settings import env
 from my_frige.models import MyFrigeInside
 from my_frige.serializers import MyFrigeInsideSerializer
 from articles.models import ArticleRecipe
+import json
 
 
 class MyFrigeView(APIView):
@@ -51,7 +52,7 @@ class MyFrigeView(APIView):
         if request.user.id != user_id:
             return Response({"message": "접근 권한이 없습니다."}, status=status.HTTP_403_FORBIDDEN)
 
-        data_set = eval(request.data.get('data_set'))
+        data_set = json.loads(request.data.get("data_set").replace("'", "\""))
         serializer = MyFrigeInsideSerializer(data=data_set, many=True)
 
         if serializer.is_valid():
@@ -72,7 +73,6 @@ class MyFrigeView(APIView):
             serializer = MyFrigeInsideSerializer(frige_inside, data=request.data)
             if serializer.is_valid():
                 serializer.save()
-                print(serializer.data)
                 return Response(serializer.data, status=status.HTTP_200_OK)
             else:
                 return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
