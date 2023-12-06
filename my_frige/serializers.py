@@ -16,6 +16,5 @@ class MyFrigeInsideSerializer(serializers.ModelSerializer):
         if not my_frige.expiration_date:
             my_frige.expiration_date = my_frige.created_at.date() + timedelta(weeks=1) # +7일
         my_frige.save()
-        print(my_frige.state)
         return my_frige
     
