@@ -20,9 +20,14 @@
 털랭 서비스는 이미지 검색 및 요리 시에 레시피 확인이 용이하도록, 스마트폰 환경도 지원하여 서비스의 기획의도를 더욱 살렸습니다.
 
 
-## 팀 소개
+## 팀 소개와 담당 기능
 
-- BE,AWS 김민재: 레시피 댓글 CRUD, EC2 배포, 프론트엔드 배포
+||김민재|명세인|이솔|이재윤|조호진|
+|-|-|-|-|-|-|
+|GitHub|https://github.com/Kim-Minjae9872|https://github.com/myeongzip|https://github.com/solleepang|https://github.com/JaeYoonAI|https://github.com/bm4706|
+|Blog|https://velog.io/@alswo9872|https://velog.io/@nies|https://velog.io/@dlthf727|https://jaeyoonai.github.io|https://bm4706.tistory.com|
+
+- BE, AWS 김민재: 레시피 댓글 CRUD, EC2 배포, 프론트엔드 배포
 - FE 김현우: 회원가입, 로그인, 이메일/닉네임 중복확인, 비밀번호 재설정, 소셜로그인, 프로필 수정, 마이페이지, 내 냉장고, 팔로우, 네비게이션, 디자인
 - BE 명세인: 회원가입, 로그인, 이메일/닉네임 중복확인, 회원가입 이메일 인증, 비밀번호 재설정
 - FE 우은진: 레시피 CRUD, 레시피 댓글 CURD, 레시피 검색, 북마크, 별점, 레시피 함께보기, 자유게시판 CRUD, 메인페이지, 디자인
@@ -33,6 +38,9 @@
 
 ## 배포 주소
 <a href="https://teulang.net/">털랭 사이트 바로가기</a>
+
+#### 프론트엔드 GitHub
+<a href="https://github.com/Duboo31/final_project_teulang_client">털랭 프론트엔드 GitHub 주소</a>
 
 ## 시작 가이드
 #### Requirements
@@ -82,6 +90,13 @@ https://teulang.notion.site/2348824ac44846ebadb7feb019630974?v=d885ceee2f274226a
 <p align="center">
 <img src="https://github.com/solleepang/final_project_teulang_back/assets/144214007/55b68ec2-1d11-4e64-a80f-cbf43039e9af" alt="서비스아키텍쳐 이미지" >
 </p>
+
+## 화면
+#### 메인
+|Destop 🖥️|Mobile 📱|
+|-|-|
+|![스크린샷 2023-12-07 04-12-47](https://github.com/Duboo31/final_project_teulang_client/assets/92058864/7ed2c1da-b070-43f9-b244-9495cb1ea300)|![스크린샷 2023-12-07 04-14-53](https://github.com/Duboo31/final_project_teulang_client/assets/92058864/0921a60c-b9b1-497f-a205-d66635a4d7ce)|
+> 인기 / 최신 레시피를 슬라이드로 볼 수 있는 페이지
 
 ## 기타 사항
 - 백엔드 배포 자동화가 이뤄져 있지 않음
